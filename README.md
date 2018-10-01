@@ -12,11 +12,14 @@ CozmoCommander opens a Graphical User Interface (GUI) with optional viewers prov
 You can control the Cozmo robot and its interaction with lightcubes and other objects. 
 You can open a 2D map where the position of the robot is tracked and other objects are shown. 
 
-Acknowledgements:
-*****************
+Acknowledgements and license:
+*****************************
 I thank Anki for providing the Cozmo, the SDK and the very useful tutorials. 
 I thank Grinning Hermit for providing the Coumo Explorer Tool which was a great source of inspiration. 
 I thank all who provide great tutorials on Python and TkInter
+
+According to the Apache License http://www.apache.org/licenses/ you may freely copy, distribute and alter this program
+free of charge as long as you do not charge the customer for this program or a derivated work. 
 
 Prerequisites:
 **************

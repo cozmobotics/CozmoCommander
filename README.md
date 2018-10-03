@@ -19,7 +19,7 @@ I thank Grinning Hermit for providing the Coumo Explorer Tool which was a great 
 I thank all who provide great tutorials on Python and TkInter
 
 According to the Apache License http://www.apache.org/licenses/ you may freely copy, distribute and alter this program
-free of charge as long as you do not charge the customer for this program or a derivated work. 
+free of charge as long as you publish this program or a derivated work under the same license and free of charge. 
 
 Prerequisites:
 **************

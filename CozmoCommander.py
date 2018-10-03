@@ -46,6 +46,7 @@ Have fun!
 # move robot with cursor keys ... root.bind("<Key>", callbackKey), MapCanvas.bind("<Key>", callbackKey) 
 # play sounds ... see 10_play_sound.py  ... cozmo.audio.AudioEvents
 # map: redraw the axes when the user changes the sizo of the map .... event <Configure> 
+# motion frame: Show robot's coordinates as status bar
 
 # done:
 # draw cubes in map 2018-09-24
@@ -401,7 +402,8 @@ def createMap (robot: cozmo.robot.Robot):
 		MapCanvas.tag_bind (CubeSquares[2], '<Double-1>', lambda: buttonCubeX(root, robot, 3))
 		
 		MapCanvas.bind ('<B1-Motion>', drawLineMouseDown)
-		MapCanvas.bind ('<Motion>', drawLineMouseUp)
+		# MapCanvas.bind ('<Motion>', drawLineMouseUp)
+		MapCanvas.bind ('<ButtonRelease-1>', drawLineMouseUp)
 
 		
 		drawMap (robot)	# first call to drawMap, from then on it will activate itself periodically

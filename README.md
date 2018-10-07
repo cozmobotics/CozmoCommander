@@ -4,7 +4,7 @@ Use the Anki Cozmo robot with a GUI. Uses Python with TkInter.
 I am new to Cozmo, new to GUI programming and still new to Python. 
 So this project is definitely not programmed in the most efficient or most elegant way. 
 At the beginning I only wanted to find out how the world coordinate system works. 
-By and by, the program got bigger. 
+By and by, the program got bigger and it is still growing. The "todo" grows faster that the "done" list. 
 
 What it does:
 *************

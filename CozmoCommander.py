@@ -47,6 +47,12 @@ Have fun!
 # play sounds ... see 10_play_sound.py  ... cozmo.audio.AudioEvents
 # map: redraw the axes when the user changes the sizo of the map .... event <Configure> 
 # motion frame: Show robot's coordinates as status bar
+# import: try/except ... 
+# move forward/backward: let user choose which method to use (drive_straight or go to pose)
+# wheelie
+# draw an oval around the motion buttons 
+# set up the top window in main(), start robotMainProgram with "try:" and issue an error message when device is not connected (for people who start CozmoCommander not from command line but from a graphical file manager) 
+# viewer=4 --> create map
 
 # done:
 # draw cubes in map 2018-09-24
@@ -60,19 +66,39 @@ Have fun!
 # map axes: draw ticks every 100mm 
 
 
-import asyncio
+import sys
 
-import cozmo
-from cozmo.util import degrees, distance_mm, speed_mmps, Pose
+if (sys.version_info.major != 3):
+	sys.exit('Please run CozmoCommander in Python 3.x')
+
+try:
+	import asyncio
+except ImportError:
+    sys.exit('Please run `pip3 install --user asyncio` to run CozmoCommander') 
+	
+try:
+	import cozmo
+	from cozmo.util import degrees, distance_mm, speed_mmps, Pose
+except ImportError:
+    sys.exit('Please run `pip3 install --user cozmo` to run CozmoCommander') 
  
-import tkinter
-from tkinter import *
-from tkinter import messagebox
-# from tkinter.tix import *			# tooltips	# doesn't work 
+try:
+	import tkinter
+	from tkinter import *
+	from tkinter import messagebox
+	# from tkinter.tix import *			# tooltips	# doesn't work 
+except ImportError:
+    sys.exit('Please run `pip3 install --user tkinter` to run CozmoCommander') 
 
-import argparse
+try:
+	import argparse
+except ImportError:
+    sys.exit('Please run `pip3 install --user argparse` to run CozmoCommander') 
 
-import math
+try:
+	import math
+except ImportError:
+    sys.exit('Please run `pip3 install --user math` to run CozmoCommander') 
 
 
 #----------------------------------------------------------------	
@@ -385,7 +411,8 @@ def createMap (robot: cozmo.robot.Robot):
 			)
 		MapCanvas.itemconfig(RobotCircle, fill="black")
 
-		for Index in range(4):
+		# for Index in range(4):
+		for Index in range(3):
 			CubeSquare = MapCanvas.create_rectangle ( 
 				world2canvasX(0) - RobotCircleRadius, 
 				world2canvasY(0) - RobotCircleRadius, 
@@ -470,8 +497,11 @@ def drawLineMouseUp (event):
 	global Line
 	global MapCanvas
 	
-	if (FlagMouseDown == True):
+	if (FlagMouseDown == True):		# +++ no longer needed as we use <Release> instead of <Move>
 		FlagMouseDown = False
+		
+		MapCanvas.itemconfig (Line, fill="darkred")
+		MapCanvas.itemconfig (Line, width=3)
 		
 		DeltaX = canvas2worldX(LineCoords[2]) - canvas2worldX(LineCoords[0])
 		DeltaY = canvas2worldY(LineCoords[3]) - canvas2worldY(LineCoords[1])
@@ -505,8 +535,7 @@ def drawLineMouseDown (event):
 		LineCoords[1] = event.y
 		
 		Line = MapCanvas.create_line (LineCoords[0], LineCoords[1], event.x, event.y) # actually the line length is 0
-		MapCanvas.itemconfig (Line, width=2)
-		# MapCanvas.itemconfig (Line, color="darkred")
+		
 	else:
 		LineCoords[2] = event.x
 		LineCoords[3] = event.y
@@ -588,8 +617,8 @@ def tick (parent, robot: cozmo.robot.Robot):
 	# --- repeatedly restart this function ---
 	parent.after (1000, lambda: tick(parent, robot))
 
-#----------------mainProgram----------------------------------------------------
-def mainProgram(robot: cozmo.robot.Robot):
+#----------------robotMainProgram----------------------------------------------------
+def robotMainProgram(robot: cozmo.robot.Robot):
 
 	global top 		
 	global LDist 		
@@ -849,10 +878,10 @@ PlayFree = False
 
 		
 # global variables for the GUI
-# when we refer to a control from outside mainProgram, like changing the color of a button, 
+# when we refer to a control from outside robotMainProgram, like changing the color of a button, 
 # we need to have it global. 
-# We cannot yet set them up because we need "robot" to be passed as a parameter, and this will be known in mainProgram. 
-# Furthermore, they must reside in mainProgram. Otherwise the viewers cannot be used. 
+# We cannot yet set them up because we need "robot" to be passed as a parameter, and this will be known in robotMainProgram. 
+# Furthermore, they must reside in robotMainProgram. Otherwise the viewers cannot be used. 
 # For now, they are integers an will be assigned the appropriate type later. 
 top 					= 0
 LDist 					= 0
@@ -886,4 +915,4 @@ BPlayFree				= 0
 
 # start main program
 #cozmo.robot.Robot.drive_off_charger_on_connect = False  # Cozmo can stay on charger for now 
-cozmo.run_program(mainProgram, use_3d_viewer=Use3D, use_viewer=UseCam)
+cozmo.run_program(robotMainProgram, use_3d_viewer=Use3D, use_viewer=UseCam)

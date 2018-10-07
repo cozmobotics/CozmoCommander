@@ -18,8 +18,17 @@ I thank Anki for providing the Cozmo, the SDK and the very useful tutorials.
 I thank Grinning Hermit for providing the Coumo Explorer Tool which was a great source of inspiration. 
 I thank all who provide great tutorials on Python and TkInter
 
-According to the Apache License http://www.apache.org/licenses/ you may freely copy, distribute and alter this program
-free of charge as long as you publish this program or a derivated work under the same license and free of charge. 
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License in the file LICENSE.txt or at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 Prerequisites:
 **************
@@ -31,7 +40,8 @@ Cozmo SDK and orther Python modules as requested,
 an Android (or IOS?) device connected to the computer via USB.
 Optionally: freeglut to use the 3D viewer.
 
-Refer to the SDK documentation for setting up your device. 
+Refer to the SDK documentation for setting up your device
+https://developer.anki.com/blog/learn/tutorial/getting-started-with-the-cozmo-sdk/
 
 How to start CozmoCommander:
 ****************************

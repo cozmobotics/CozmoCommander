@@ -1,0 +1,158 @@
+<h1>CozmoCommander</h1>
+<p>Use the Anki Cozmo robot with a GUI. Uses Python with TkInter.</p>
+
+<p>I am new to Cozmo, new to GUI programming and still new to Python. <br>
+So this project is definitely not programmed in the most efficient or most elegant way. <br>
+At the beginning I only wanted to find out how the world coordinate system works. <br>
+By and by, the program got bigger and it is still growing. The "todo" grows faster that the "done" list. </p>
+
+<ul>
+<li><a href = "#What it does">What it does</a></li>
+<li><a href = "#Acknowledgements, license and Liability">Acknowledgements, license and Liability</a></li>
+<li><a href = "#Prerequisites">Prerequisites</a></li>
+<li><a href = "#How to start CozmoCommander">How to start CozmoCommander</a></li>
+<li><a href = "#How to use CozmoCommander">How to use CozmoCommander</a></li>
+	<ul>
+	<li><a href = "#The Motion Frame">The Motion Frame</a></li>
+	<li><a href = "#The Cube Frame">The Cube Frame </a></li>
+	<li><a href = "#The Faces frame">The Faces frame </a></li>
+	<li><a href = "#The bottom area">The bottom area</a></li>
+	</ul>
+<li><a href = "#The 2D map">The 2D map</a></li>
+</ul>
+
+<!-- ------------------- -->
+<a name = "What it does"></a><<h2>What it does:</h2>
+<p>CozmoCommander opens a Graphical User Interface (GUI) with optional viewers provided by the Cozmo SDK. <br>
+You can control the Cozmo robot and its interaction with lightcubes and other objects. <br>
+You can open a 2D map where the position of the robot is tracked and other objects are shown. <br>
+You can create virtual objects in the 2D map and send Cozmo to a location by doubleclicking on the map. </p>
+
+<!-- ------------------- -->
+<a name = "Acknowledgements, license and Liability"></a><h2>Acknowledgements, license and Liability:</h2>
+<p>I thank Anki for providing the Cozmo, the SDK and the very useful tutorials. <br>
+I thank Grinning Hermit for providing the Cozmo Explorer Tool which was a great source of inspiration. <br>
+I thank all who provide great tutorials on Python and TkInter</p>
+
+<p>Licensed under the Apache License, Version 2.0 (the "License");<br>
+you may not use this file except in compliance with the License.<br>
+You may obtain a copy of the License in the file LICENSE.txt or at</p>
+
+<p>    <a href="http://www.apache.org/licenses/LICENSE-2.0" target="NewWindow">http://www.apache.org/licenses/LICENSE-2.0</a></p>
+
+<p>Unless required by applicable law or agreed to in writing, software<br>
+distributed under the License is distributed on an "AS IS" BASIS,<br>
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.<br>
+See the License for the specific language governing permissions and<br>
+limitations under the License.</p>
+
+<p>This applies especially but not limited to damages of the robot <br>
+and damages or injuries caused by the robot. </p>
+
+<!-- ------------------- -->
+<a name = "Prerequisites"></a><h2>Prerequisites:</h2>
+<ul><li>You need a Cozmo robot,</li> 
+<li>an Android (or IOS?) device connected to the computer via USB.</li>
+<li>the Cozmo App,</li>
+<li>a computer running Linux (Ubuntu) or Windows,</li>
+<li>Python3,</li>
+<li>Cozmo SDK and other Python libraries as requested,   </li>
+<li>Optionally: freeglut to use the 3D viewer.</li></ul>
+
+<p>Refer to the SDK documentation for setting up your device
+<a href="https://developer.anki.com/blog/learn/tutorial/getting-started-with-the-cozmo-sdk/" target="NewWindow">https://developer.anki.com/blog/learn/tutorial/getting-started-with-the-cozmo-sdk/</a></p>
+
+<!-- ------------------- -->
+<a name = "How to start CozmoCommander"></a><h2></a>How to start CozmoCommander:</h2>
+<ul><li>Connect your device to the Cozmo via WiFi and to the computer via USB cable. </li>
+<li>On the device, start the Cozmo App, connect to Cozmo and enter SDK mode. </li>
+<li>Place Cozmo on the charger (again). </li></ul>
+
+<p>From the command line (Linux and Windows), enter <br>
+<code>python3 [path to CozmoCommander]CozmoCommander.py [--arguments]</code><br>
+or under Linux <br>
+<code>./CozmoCommander.py [--arguments]</code></p>
+
+<p>Arguments: <br>
+--help  ... A short description <br>
+--viewer=xx ... xx=0 = no viewer (default), 1 = Camera, 2 = 3D, 3 = Camera+3D</p>
+
+CozmoCommander should start without sending error messages to the console, 
+the GUI should appear 
+and Cozmo should move a few millimeters forward. 
+
+<a name = "How to use CozmoCommander"></a><h2>How to use CozmoCommander:</h2>
+The GUI is divided into three frames called "Motion", "Cubes" and "Faces". 
+Below these frames there is the bottom section and a status line. 
+
+<!-- ------------------- -->
+<a name = "The Motion Frame"></a><h3>The Motion Frame:</h3>
+
+<img src="images\ScreenshotCozmoCommander.jpg">
+
+<p>First you will notice four buttons called "Forward", "Backward", "Left" and "Right". <br>
+"Forward" and "Backward" move Cozmo in a straight line, "Left" and "Right" make him turn in place. </p>
+
+<p>The distance and angle by which Cozmo is moved can be entered in the entry fields above. </p>
+
+<p>Below the motion buttons there are sliders to control the head and the lift. <br>
+Adjust the sliders and click the buttons above the sliders to move head or lift. </p>
+
+<p>Below the sliders there are three buttons: 
+<ul><li>"Map"  ... opens the 2d map, see below. </li>
+<li>"Stop" ... Stop all motions</li>
+<li>"Play" ... Start or stop freeplay behaviors </li></ul></p>
+
+<!-- ------------------- -->
+<a name = "The Cube Frame"></a><h3>The Cube Frame: </h3>
+<p>The lightcubes show red or green LEDs indicating whether they are visible to the robot (green) or not (red). <br>
+Lightcube 1 shows 1 LED, lightcube 2 shows 2 LEDs and lightcube 3 shows 3 LEDs. </p>
+
+<p>On the Cube frame there are three buttons, indicating the three cubes. <br>
+Note that the Id's of the cubes are not necessarily consecuteve. <br>
+The buttons turn red or green to indicate whether a cube is visible to the robot. <br>
+Click one of these buttons to select a cube for the following actions. <br>
+You may select a cube which is not visible. </p>
+
+<p>Buttons for actions are:
+<ul><li>"Go To" ... Go near the selected cube, the distance can be adjusted with the slider right of the button. </li>
+<li>"Dock"  ... Dock to the selected cube, the angle can be adjusted with the slider right of the button.</li>
+<li>"Lift"  ... dock and lift up the selected cube.</li>
+<li>"put on top" ... puts a previously lifted cube on top of the selected one. </li>
+<li>"roll" ... roll the selected cube. </li></ul></p>
+
+<p>On the bottom of the Cube frame, the coordinates of the selected cube are displayed. </p>
+
+<!-- ------------------- -->
+<a name = "The Faces frame"></a><h3>The Faces frame: </h3>
+<p>is not yet implemented. </p>
+
+<!-- ------------------- -->
+<a name = "The bottom area"><h3>The bottom area:</h3>
+<p>A menu lets you choose an animation which is played immediately after selecting it. 
+The adjacent button "repeat" will play the previously selected animation again. </p>
+
+<p>A text element lets you enter a text which Cozmo will say when you click the "say" button. </p>
+
+<p>The status line is not yet implemented. </p>
+
+<!-- ------------------- -->
+<a name = "The 2D map"></a><h2>The 2D map:</h2>
+
+<img src="images\Screenshot2Dmap.jpg">
+
+<p>When you click the "map" button in the "motion" frame, a separate window is opened. <br>
+The map shows coordinate axes with ticks every 100 mm. <br>
+Cozmo's location is shown as a black dot. When Cozmo moves, the dot moves and its motion is traced with a line. </p>
+
+<p>A double-click on the map sends Cozmo to the spot where you clicked. </p>
+
+<p>The cubes are shown as little squares (they are not rotated to reflect the rotation angle of the cubes). <br>
+The selected cube has a wider border, and the cubes are filled red or green according whether tey are visible or not. </p>
+
+<p>Clicking and dragging creates a "custom object" which is shaped like a wall and which Cozmo will avoid when calculating paths. </p>
+
+
+
+
+

@@ -6,13 +6,13 @@ So this project is definitely not programmed in the most efficient or most elega
 At the beginning I only wanted to find out how the world coordinate system works. 
 By and by, the program got bigger and it is still growing. The "todo" grows faster that the "done" list. 
 
-##What it does:
+## What it does:
 *************
 CozmoCommander opens a Graphical User Interface (GUI) with optional viewers provided by the Cozmo SDK. 
 You can control the Cozmo robot and its interaction with lightcubes and other objects. 
 You can open a 2D map where the position of the robot is tracked and other objects are shown. 
 
-##Acknowledgements, license and liability:
+## Acknowledgements, license and liability:
 ****************************************
 I thank Anki for providing the Cozmo, the SDK and the very useful tutorials. 
 I thank Grinning Hermit for providing the Cozmo Explorer Tool which was a great source of inspiration. 
@@ -33,7 +33,7 @@ limitations under the License.
 This applies especially but not limited to damages of the robot 
 and damages or injuries caused by the robot. 
 
-##How to start and use CozmoCommander
+## How to start and use CozmoCommander
 *************************************
 see the HTML document in the Documentation folder. 
 

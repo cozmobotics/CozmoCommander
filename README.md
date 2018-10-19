@@ -35,6 +35,6 @@ and damages or injuries caused by the robot.
 
 ## How to start and use CozmoCommander
 *************************************
-see the HTML document in the Documentation folder. 
+see CozmoCommander_en.html in the CozmoCommanderDocumentation folder. 
 
 

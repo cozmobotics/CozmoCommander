@@ -22,7 +22,7 @@ By and by, the program got bigger and it is still growing. The "todo" grows fast
 </ul>
 
 <!-- ------------------- -->
-<a name = "What it does"></a><<h2>What it does:</h2>
+<a name = "What it does"></a><h2>What it does:</h2>
 <p>CozmoCommander opens a Graphical User Interface (GUI) with optional viewers provided by the Cozmo SDK. <br>
 You can control the Cozmo robot and its interaction with lightcubes and other objects. <br>
 You can open a 2D map where the position of the robot is tracked and other objects are shown. <br>
@@ -91,17 +91,29 @@ Below these frames there is the bottom section and a status line.
 <img src="images\ScreenshotCozmoCommander.jpg">
 
 <p>First you will notice four buttons called "Forward", "Backward", "Left" and "Right". <br>
-"Forward" and "Backward" move Cozmo in a straight line, "Left" and "Right" make him turn in place. </p>
+"Forward" and "Backward" move Cozmo in a (more or less) straight line, "Left" and "Right" make him turn in place. </p>
 
-<p>The distance and angle by which Cozmo is moved can be entered in the entry fields above. </p>
+Below these four buttons there is a selection for the method which is used to drive forward or backward. <br>
+<ul>
+<li>Drive Straight (default): more accurate, but ignores virtual objects (see <a href = "#The 2D map">below</a>)</li>
+<li>Go to Pose: some deviations, especially when driving backwards, but respects virtual objects (see <a href = "#The 2D map">below</a>)</li>
+</ul>
+
+<p>The distance, speed and angle by which Cozmo is moved can be entered in the entry fields below. <br>
+Note that the entry for speed is disabled when you select the "go to pose" method. 
+</p>
+
 
 <p>Below the motion buttons there are sliders to control the head and the lift. <br>
-Adjust the sliders and click the buttons above the sliders to move head or lift. </p>
+Adjust the sliders and click the buttons above the sliders to move head or lift. <br>
+When you move the sliders too fast, head and lift cannot follow. Therefore you need the buttons. </p>
 
 <p>Below the sliders there are three buttons: 
 <ul><li>"Map"  ... opens the 2d map, see below. </li>
 <li>"Stop" ... Stop all motions</li>
 <li>"Play" ... Start or stop freeplay behaviors </li></ul></p>
+
+<p>On the bottom of the Motion Frame there is a status bar which shows the current robot coordinates. </p>
 
 <!-- ------------------- -->
 <a name = "The Cube Frame"></a><h3>The Cube Frame: </h3>
@@ -124,8 +136,8 @@ You may select a cube which is not visible. </p>
 <p>On the bottom of the Cube frame, the coordinates of the selected cube are displayed. </p>
 
 <!-- ------------------- -->
-<a name = "The Faces frame"></a><h3>The Faces frame: </h3>
-<p>is not yet implemented. </p>
+<a name = "The Faces frame"></a><h3>The Faces frame</h3>
+<p>Besides a status bar on the bottom of the faces frame, it is not yet implemented. </p>
 
 <!-- ------------------- -->
 <a name = "The bottom area"><h3>The bottom area:</h3>

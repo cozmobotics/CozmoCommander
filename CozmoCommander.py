@@ -28,31 +28,24 @@ Have fun!
 # todo:
 # viewer=4 ... map
 # map button: map ein- und ausschalten (RAISED/SUNKEN) 
-# head und lift slider ... command, Buttons weg
 # Würfel durch Anklicken in der Karte selektieren (BCubex invoke) ... programmiert, aber geht nicht 
-# Bug: Offensichtlich habe ich vier cubes in der Karte erzeugt   
 # backup_onto_charger(max_drive_time=3)
 # anim_names ... bisher verwende ich nur anim_triggers
 # cliff ...? 
-# drive_wheel_motors für Steuerung auf Kurvenbahnen, nicht so abgehackt. Grafische Eingabemöglichkeit? 
-# Maus-button drücken und halten, und dann joystick-artig bewegen? 
+# drive_wheel_motors für Steuerung auf Kurvenbahnen, nicht so abgehackt. Grafische Eingabemöglichkeit? --> extra project
+# Maus-button drücken und halten, und dann joystick-artig bewegen?  --> extra project
 # headlight ... Infrarot-Beleuchtung (Nacht-Modus) 
 # turn_towards_face ... robot.turn_towards_face(face_to_follow) 
 # enable_facial_expression_estimation ???
-# entries for speed 
 # delete walls (all of them) 
-# walls in different color 
 # Linux: "say" entry and button not visible
 # move robot with cursor keys ... root.bind("<Key>", callbackKey), MapCanvas.bind("<Key>", callbackKey) 
 # play sounds ... see 10_play_sound.py  ... cozmo.audio.AudioEvents
 # map: redraw the axes when the user changes the sizo of the map .... event <Configure> 
 # motion frame: Show robot's coordinates as status bar
-# import: try/except ... 
-# move forward/backward: let user choose which method to use (drive_straight or go to pose)
-# wheelie
 # draw an oval around the motion buttons 
 # set up the top window in main(), start robotMainProgram with "try:" and issue an error message when device is not connected (for people who start CozmoCommander not from command line but from a graphical file manager) 
-# viewer=4 --> create map
+# When user clicks on map again, put focus on map 
 
 # done:
 # draw cubes in map 2018-09-24
@@ -63,7 +56,14 @@ Have fun!
 # move forward: go to pose relative_to_ronot=True --> avoids walls (done, but it avoids walls only at a greater distance)
 # abort_all_actions(log_abort_messages=False) .... wenn ich den Roboter nicht bewegen kann. oder in_parallel verwenden? 
 # start_freeplay_behaviors() / stop_freeplay_behaviors()
+# walls in different color 
 # map axes: draw ticks every 100mm 
+# Bug: Offensichtlich habe ich vier cubes in der Karte erzeugt   
+# import: try/except ... 
+# entry for speed 2018-10-18
+# move forward/backward: let user choose which method to use (drive_straight or go to pose) 2018-10-18
+# head und lift slider ... command, get rid of Buttons (doesn't work very well, I keep the buttons)
+# wheelie (programmed, but Cozmo stops with message "cozmo.general INFO     Robot delocalized - invalidating poses for all objects")
 
 
 import sys
@@ -100,12 +100,42 @@ try:
 except ImportError:
     sys.exit('Please run `pip3 install --user math` to run CozmoCommander') 
 
+#-----------------------------------------------------------------
+def methodDriveStraight ():
+	global BMethodDriveStraight
+	global BMethodGoToPose
+	global DriveMethod
+	global ESpeed
+	
+	print ("Dive straight")
+	BMethodDriveStraight.config (relief = SUNKEN)
+	BMethodGoToPose.config (relief = RAISED)
+	DriveMethod	= "DriveStraight"
+	ESpeed.config (state = NORMAL)
+	
+#-----------------------------------------------------------------
+def methodGoToPose ():
+	global BMethodDriveStraight
+	global BMethodGoToPose
+	global DriveMethod
+	global ESpeed
+	
+	print ("Go to pose")
+	BMethodDriveStraight.config (relief = RAISED)
+	BMethodGoToPose.config (relief = SUNKEN)
+	DriveMethod	= "GoToPose"
+	ESpeed.config (state = DISABLED)
+	
 
 #----------------------------------------------------------------	
-def moveStraight (robot: cozmo.robot.Robot, Distance):
-	# robot.drive_straight(distance_mm(Distance), speed_mmps(100)).wait_for_completed()
-	# robot.drive_straight(distance_mm(Distance), speed_mmps(100))
-	robot.go_to_pose(Pose(Distance, 0, 0, angle_z=degrees(0)), relative_to_robot=True)
+def moveStraight (robot: cozmo.robot.Robot, Distance, Speed):
+	global DriveMethod
+	# robot.drive_straight(distance_mm(Distance), speed_mmps(Speed)).wait_for_completed()
+	if (DriveMethod == "DriveStraight"):
+		robot.drive_straight(distance_mm(Distance), speed_mmps(Speed))
+	else:
+		robot.go_to_pose(Pose(Distance, 0, 0, angle_z=degrees(0)), relative_to_robot=True)
+
 
 #----------------------------------------------------------------	
 def moveTurn 	(robot: cozmo.robot.Robot, Angle):
@@ -125,10 +155,12 @@ def playFree (robot: cozmo.robot.Robot):
 		robot.start_freeplay_behaviors()
 		PlayFree = True
 		BPlayFree.config (relief = SUNKEN)
+		print ("start_freeplay_behaviors")
 	else:	
 		robot.stop_freeplay_behaviors()
 		PlayFree = False
 		BPlayFree.config (relief = RAISED)
+		print ("stop_freeplay_behaviors")
 		
 		
 #----------------------------------------------------------------	
@@ -169,9 +201,18 @@ def buttonCubeWindowRoll (robot: cozmo.robot.Robot):
 	try:
 		robot.roll_cube(robot.world.light_cubes[CubeIndexGlobal], check_for_object_on_top=True, num_retries=2)
 	except:
-		messagebox.showinfo("Something wen wrong...")
+		messagebox.showinfo("Something went wrong...")
 		
-	print ("Button Cube Roll clicked")
+
+#----------------------------------------------------------------	
+def buttonCubeWindowWheelie (robot: cozmo.robot.Robot):
+	global CubeIndexGlobal
+	
+	try:
+		robot.pop_a_wheelie(robot.world.light_cubes[CubeIndexGlobal], num_retries=2)
+	except:
+		messagebox.showinfo("Something went wrong...")
+		
 
 #----------------------------------------------------------------
 def sayText (robot: cozmo.robot.Robot, Text):
@@ -210,12 +251,24 @@ def buttonCubeX(parent, robot: cozmo.robot.Robot, IndexCube):
 	
 	
 #----------------------------------------------------------------
-def scaleLift (robot: cozmo.robot.Robot):
-	robot.set_lift_height(ScLift.get(), in_parallel=True) 
+def scaleLift (Height):
+	global RobotGlobal
+	
+	RobotGlobal.set_lift_height(float(Height), in_parallel=True) 
+
+
+
+
+	# robot.set_lift_height(ScLift.get(), in_parallel=True) 
  	
 #----------------------------------------------------------------
-def scaleHead (robot: cozmo.robot.Robot):
-	robot.set_head_angle(degrees(ScHead.get()), in_parallel=True)  
+def scaleHead (Angle):
+	global RobotGlobal
+	
+	RobotGlobal.set_head_angle(degrees(int(Angle)), in_parallel=True) 
+	# RobotGlobal.set_head_angle(degrees(ScHead.get()), in_parallel=True)  
+	
+	# robot.set_head_angle(degrees(ScHead.get()), in_parallel=True)  
  	
 #----------------------------------------------------------------	
 def cubeChangeColor (robot: cozmo.robot.Robot, IndexCube, Color):
@@ -260,7 +313,12 @@ def printFaceData (Face):
 	global LFaceData
 	
 	print ("ID:" + str(Face.face_id) + " name = " + Face.name)
-	# LFaceData.config (text = "ID:" + str(Face.face_id) + " name = " + Face.name) +++++ bei LCubeWindowStatusBar geht's doch auch?????
+	LFaceData.config (text = "ID:" + str(Face.face_id) + " name = " + Face.name)
+	
+	# if (Face.is_visible):						# +++ is always true, so it doesn't make sense 
+		# LFaceData.config (fg="green")
+	# else:
+		# LFaceData.config (fg="red")
 
 # -------------------------------------------------------------------
 def world2canvasX (WorldX):
@@ -546,8 +604,9 @@ def tick (parent, robot: cozmo.robot.Robot):
 	
 	global CubeIndexGlobal
 	global LCubeWindowStatusBar
+	global LMotionWindowStatusBar
 
-	
+	# -------------Cubes--------------------
 	try:
 		VisibleCube = robot.world.wait_for_observed_light_cube(timeout=0.1)
 		# actually we don't need VisibleCube, and for now it doesn't matter if cubes are found. 
@@ -578,14 +637,23 @@ def tick (parent, robot: cozmo.robot.Robot):
 			cubeChangeColor (robot, IndexCube, "green")
 		else:
 			cubeChangeColor (robot, IndexCube, "red")
-			
+	
+	# Cube Window Status bar
 	ID     = robot.world.light_cubes[CubeIndexGlobal].object_id
 	XPos   = round(robot.world.light_cubes[CubeIndexGlobal].pose.position.x)
 	YPos   = round(robot.world.light_cubes[CubeIndexGlobal].pose.position.y)
 	ZPos   = round(robot.world.light_cubes[CubeIndexGlobal].pose.position.z)
 	AngleZ = round(robot.world.light_cubes[CubeIndexGlobal].pose.rotation.angle_z.degrees)
-            
 	LCubeWindowStatusBar.config (text = "Cube" + str(ID) + ": X=" + str(XPos) + ", Y=" + str(YPos) + ", Z=" + str(ZPos) + ", " + str(AngleZ) + "°")
+	
+	# Motion Window Status bar
+	XPos   = round(robot.pose.position.x)
+	YPos   = round(robot.pose.position.y)
+	ZPos   = round(robot.pose.position.z)
+	AngleZ = round(robot.pose.rotation.angle_z.degrees)
+	LMotionWindowStatusBar.config (text = "X=" + str(XPos) + ", Y=" + str(YPos) + ", Z=" + str(ZPos) + ", " + str(AngleZ) + "°")
+	
+	
 	
 	# --------faces------------
 	
@@ -623,8 +691,11 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	global top 		
 	global LDist 		
 	global EDist 		
+	global ESpeed
 	global LAng 		
 	global EAng 		
+	global BMethodDriveStraight
+	global BMethodGoToPose
 	global BForward 	
 	global BBack 		
 	global BRight 		
@@ -647,6 +718,7 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	global LFaceData
 	global LStatusBar
 	global LCubeWindowStatusBar
+	global LMotionWindowStatusBar
 	global AnimNames
 	global CAnims
 	global AnimLast
@@ -659,51 +731,31 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	
 	# set up the GUI
 	top = tkinter.Tk()
-	top.geometry("900x600")
+	top.geometry("900x700")
 	top.title("Cozmo Commander")
 	# ToolTp = Balloon()	# doesn't work 
 	
 	# frames
-	motionWindow = Frame(top, bd=2, width=300, height=450, relief=GROOVE)
+	motionWindow = Frame(top, bd=2, width=300, height=550, relief=GROOVE)
 	motionWindow.grid_propagate(0)			# frame at fixed size instead of shrink to content
 	motionWindow.place (x=0, y=50)
 
-	cubeWindow = Frame(top, bd=2, width=300, height=450, relief=GROOVE)
+	cubeWindow = Frame(top, bd=2, width=300, height=550, relief=GROOVE)
 	cubeWindow.grid_propagate(0)			# frame at fixed size instead of shrink to content
 	cubeWindow.place (x=300, y=50)
 
-	FaceWindow = Frame(top, bd=2, width=300, height=450, relief=GROOVE)
+	FaceWindow = Frame(top, bd=2, width=300, height=550, relief=GROOVE)
 	FaceWindow.grid_propagate(0)			# frame at fixed size instead of shrink to content
 	FaceWindow.place (x=600, y=50)
 
 	# --- motion controls ---
 	Row=0
-	LMotion = Label (motionWindow, text="motion", bd=2, relief=GROOVE).grid (row=Row, columnspan=3)
-	Row+=1
-	LEmpty01 = Label (motionWindow, text="").grid (row=Row, columnspan=3)
+	LMotion = Label (motionWindow, text="motion", bd=2, relief=GROOVE)
+	LMotion.grid (row=Row, column=0)
 	# LMotion.place(x=0, y=0)
 	
 	Row+=1
-	LDist = Label (motionWindow, text="Distance")
-	LDist.grid(row=Row, sticky=W)
-	# ToolTp.bind_widget(LDist, balloonmsg="Distance in mm to move when \"Forward\" or \"Backward\" is pressed")	# doesn't work 
-	EDist = Entry (motionWindow, bd=2)
-	EDist.grid(row=Row, column=2, columnspan=2)
-	EDist.insert (0, "100")	# start value
-
-	Row+=1
-	LAng = Label (motionWindow, text="Angle")
-	LAng.grid(row=Row, sticky=W)
-	# ToolTp.bind_widget(LAng, balloonmsg="Angle in ° to turn when \"Left\" or \"Right\" is pressed")	# doesn't work 
-	EAng = Entry (motionWindow, bd=2)
-	EAng.grid(row=Row, column=2, columnspan=2)
-	EAng.insert (0, "45")	# start value
-
-	Row+=1
-	LEmpty02 = Label (motionWindow, text="").grid (row=Row, columnspan=3)
-
-	Row+=1
-	BForward = Button(motionWindow, text = "Forward", command = lambda: moveStraight(robot, float(EDist.get())))	
+	BForward = Button(motionWindow, text = "Forward", command = lambda: moveStraight(robot, float(EDist.get()), float(ESpeed.get())))	
 	BForward.grid(row=Row, column=2)
 	# ToolTp.bind_widget(BForward, balloonmsg="Move Forward by the distance in mm given above")	# doesn't work 
 
@@ -715,23 +767,66 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	BLeft.grid(row=Row, column=1)
 
 	Row+=1
-	BBack = Button(motionWindow, text = "Backward", command = lambda: moveStraight(robot, float(EDist.get())*(-1.0)))
+	BBack = Button(motionWindow, text = "Backward", command = lambda: moveStraight(robot, float(EDist.get())*(-1.0), float(ESpeed.get())))
 	BBack.grid(row=Row, column=2)
+
+	Row+=1
+	LEmpty01 = Label (motionWindow, text="").grid (row=Row, columnspan=3)
+	
+	Row+=1
+	LMethod = Label (motionWindow, text="Method")
+	LMethod.grid(row=Row)
+	BMethodDriveStraight = Button(motionWindow, text = "Drive Straight", relief=SUNKEN, command = methodDriveStraight)
+	BMethodDriveStraight.grid(row=Row, column=2, columnspan=2)
+	BMethodGoToPose = Button(motionWindow, text = "Go to Pose", command = methodGoToPose)
+	BMethodGoToPose.grid(row=Row, column=4, columnspan=2)
+	
+	Row+=1
+	LEmpty02 = Label (motionWindow, text="").grid (row=Row, columnspan=3)
+
+	Row+=1
+	LDist = Label (motionWindow, width=6, text="Distance")
+	LDist.grid(row=Row, sticky=W)
+	# ToolTp.bind_widget(LDist, balloonmsg="Distance in mm to move when \"Forward\" or \"Backward\" is pressed")	# doesn't work 
+	EDist = Entry (motionWindow, bd=2, width=7)
+	EDist.grid(row=Row, column=2)
+	EDist.insert (0, "100")	# start value
+	LDist1 = Label (motionWindow, text="mm")
+	LDist1.grid(row=Row, column=3, sticky=W)
+
+	ESpeed = Entry (motionWindow, bd=2, width=7)
+	ESpeed.grid(row=Row, column=4)
+	ESpeed.insert (0, "50")	# start value
+	LSpeed = Label (motionWindow, text="mm/s")
+	LSpeed.grid(row=Row, column=5, sticky=W)
+	
+	Row+=1
+	LAng = Label (motionWindow, width=6, text="Angle")
+	LAng.grid(row=Row, sticky=W)
+	# ToolTp.bind_widget(LAng, balloonmsg="Angle in ° to turn when \"Left\" or \"Right\" is pressed")	# doesn't work 
+	EAng = Entry (motionWindow, bd=2, width=7)
+	EAng.grid(row=Row, column=2)
+	EAng.insert (0, "45")	# start value
+	LAng1 = Label (motionWindow, text="deg")
+	LAng1.grid(row=Row, column=3, sticky=W)
 
 	Row+=1
 	LEmpty03 = Label (motionWindow, text="").grid (row=Row, columnspan=3)
 
 	Row+=1
-	ScHead = Scale (motionWindow, orient = VERTICAL, from_ = 45, to = -25, resolution=5)
+	LEmpty04 = Label (motionWindow, text="").grid (row=Row, columnspan=3)
+
+	Row+=1
+	ScHead = Scale (motionWindow, orient = VERTICAL, from_ = 44, to = -25, resolution=1, command = scaleHead)
 	ScHead.grid(row=Row+1, column=1)
 	ScHead.set(0)
-	BHead = Button(motionWindow, text = "Head", command = lambda: scaleHead(robot))
+	BHead = Button(motionWindow, text = "Head", command = lambda: scaleHead(ScHead.get()))
 	BHead.grid(row=Row, column=1)
 	BHead.invoke() 	# set head to horizontal at startup
-	ScLift = Scale (motionWindow, orient = VERTICAL, from_ = 1.0, to = 0.0, resolution=0.1)
+	ScLift = Scale (motionWindow, orient = VERTICAL, from_ = 1.0, to = 0.0, resolution=0.1, command = scaleLift)
 	ScLift.grid(row=Row+1, column=2)
 	ScLift.set(0)
-	BLift = Button(motionWindow, text = "Lift", command = lambda: scaleLift(robot))
+	BLift = Button(motionWindow, text = "Lift", command = lambda: scaleLift(ScLift.get()))
 	BLift.grid(row=Row, column=2)
 	BLift.invoke() 	# set lift down at startup
 	
@@ -746,14 +841,20 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	BPlayFree = Button (motionWindow, text = "play", relief = RAISED, bd=2, command = lambda: playFree(robot))
 	BPlayFree.grid(row=Row, column=3)
 
+	LMotionWindowStatusBar = Label (motionWindow, text="Status...", bd=2, relief=FLAT, anchor=W)
+	LMotionWindowStatusBar.place (x=0, y=525)
+
+
 	# --- cube window ---
 	Row=0
-	LCube = Label (cubeWindow, text="cubes", bd=2, relief=GROOVE).grid (row=Row, columnspan=3)
+	LCube = Label (cubeWindow, text="cubes", bd=2, relief=GROOVE)
+	LCube.grid (row=Row, column=0)
+	
 	Row+=1
 	LEmpty10 = Label (cubeWindow, text="").grid (row=Row, columnspan=3)
 	
 	Row+=1
-	BCube1 = Button(cubeWindow, text = "Cube" + str(robot.world.light_cubes[1].object_id), relief=RAISED, bd=5, command = lambda: buttonCubeX(motionWindow, robot, 1))
+	BCube1 = Button(cubeWindow, text = "Cube" + str(robot.world.light_cubes[1].object_id), relief=SUNKEN, bd=5, command = lambda: buttonCubeX(motionWindow, robot, 1))
 	BCube1.grid(row=Row, column=1)
 	BCube2 = Button(cubeWindow, text = "Cube" + str(robot.world.light_cubes[2].object_id), relief=RAISED, bd=5, command = lambda: buttonCubeX(motionWindow, robot, 2))
 	BCube2.grid(row=Row, column=2)
@@ -766,7 +867,7 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	Row+=1
 	BCubeWindowGoto = Button (cubeWindow, text="go to", command = lambda: buttonCubeWindowGoto(robot, float(ECubeWindowGotoDistance.get())))
 	BCubeWindowGoto.grid(row=Row, column=1, sticky=W)
-	ECubeWindowGotoDistance = Entry (cubeWindow)
+	ECubeWindowGotoDistance = Entry (cubeWindow, width=7)
 	ECubeWindowGotoDistance.grid (row=Row, column=2, columnspan=2, sticky=W)
 	ECubeWindowGotoDistance.insert(0,70)
 	Row+=1
@@ -783,18 +884,24 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	Row+=1
 	BCubeWindowRoll = Button (cubeWindow, text="roll", command = lambda: buttonCubeWindowRoll(robot))
 	BCubeWindowRoll.grid(row=Row, column=1, sticky=W)
+	Row+=1
+	BCubeWindowRoll = Button (cubeWindow, text="wheelie", command = lambda: buttonCubeWindowWheelie(robot))
+	BCubeWindowRoll.grid(row=Row, column=1, sticky=W)
 	
 	LCubeWindowStatusBar = Label (cubeWindow, text="Status...", bd=2, relief=FLAT, anchor=W)
-	LCubeWindowStatusBar.place (x=0, y=425)
+	LCubeWindowStatusBar.place (x=0, y=525)
 	
 	# --- face window ---
 	Row = 0
-	LFaceWindow = Label (FaceWindow, text="faces", bd=2, relief=GROOVE).grid (row=Row, columnspan=3)
+	LFaceWindow = Label (FaceWindow, text="faces", bd=2, relief=GROOVE)
+	LFaceWindow.grid (row=Row, column=0)
+	
 	Row+=1
 	LEmpty20 = Label (FaceWindow, text="").grid (row=Row, columnspan=3)
 	
 	Row+=1
-	LFaceData = Label (FaceWindow, text="").grid (row=Row, columnspan=3, sticky=W)
+	LFaceData = Label (FaceWindow, text="Status...")
+	LFaceData.place (x=0, y=525)
 
 	# --- lower region ----
 	LStatusBar = Label (top, text="Status...", bd=2, relief=GROOVE, anchor=W)
@@ -873,6 +980,7 @@ FlagMouseDown = False
 Line = 0
 LineCoords = [0,0,0,0]
 PlayFree = False
+DriveMethod = "DriveStraight"
 
 
 
@@ -886,8 +994,11 @@ PlayFree = False
 top 					= 0
 LDist 					= 0
 EDist 					= 0
+ESpeed					= 0
 LAng 					= 0
 EAng 					= 0
+BMethodDriveStraight	= 0
+BMethodGoToPose			= 0
 BForward 				= 0
 BBack 					= 0
 BRight 					= 0
@@ -909,6 +1020,7 @@ BCubeWindowPlaceOnTop 	= 0
 BCubeWindowRoll			= 0
 LFaceData				= 0
 LCubeWindowStatusBar	= 0
+LMotionWindowStatusBar	= 0
 LStatusBar				= 0
 CAnims					= 0
 BPlayFree				= 0

@@ -45,7 +45,9 @@ Have fun!
 # motion frame: Show robot's coordinates as status bar
 # draw an oval around the motion buttons 
 # set up the top window in main(), start robotMainProgram with "try:" and issue an error message when device is not connected (for people who start CozmoCommander not from command line but from a graphical file manager) 
-# When user clicks on map again, put focus on map 
+# When user clicks on map button again, put focus on map 
+# get_on_charger() ... map is not updated. Parallel tasks with threading? 
+# German description (html)
 
 # done:
 # draw cubes in map 2018-09-24
@@ -61,12 +63,20 @@ Have fun!
 # Bug: Offensichtlich habe ich vier cubes in der Karte erzeugt   
 # import: try/except ... 
 # entry for speed 2018-10-18
+# --- git commit --- 2018-10-19 ---
 # move forward/backward: let user choose which method to use (drive_straight or go to pose) 2018-10-18
 # head und lift slider ... command, get rid of Buttons (doesn't work very well, I keep the buttons)
 # wheelie (programmed, but Cozmo stops with message "cozmo.general INFO     Robot delocalized - invalidating poses for all objects")
+# The selected cube gets a blue light 2018-10-20
+# "Go to/from Charger"
+# Get battery status, print in status line  2018-10-20
+# Cube Status line: print bttery status   2018-10-20
+# Integrate get_on_charger() by Lucas Waelti  2018-10-23
+# --- git commit --- 2018-10-23 ---
 
 
 import sys
+import time
 
 if (sys.version_info.major != 3):
 	sys.exit('Please run CozmoCommander in Python 3.x')
@@ -78,7 +88,7 @@ except ImportError:
 	
 try:
 	import cozmo
-	from cozmo.util import degrees, distance_mm, speed_mmps, Pose
+	from cozmo.util import degrees, radians, distance_mm, speed_mmps, Pose
 except ImportError:
     sys.exit('Please run `pip3 install --user cozmo` to run CozmoCommander') 
  
@@ -144,6 +154,7 @@ def moveTurn 	(robot: cozmo.robot.Robot, Angle):
 	
 #-----------------------------------------------------------------
 def stop 	(robot: cozmo.robot.Robot):
+	robot.stop_all_motors()
 	robot.abort_all_actions(log_abort_messages=False)
 	
 #-----------------------------------------------------------------
@@ -270,9 +281,336 @@ def scaleHead (Angle):
 	
 	# robot.set_head_angle(degrees(ScHead.get()), in_parallel=True)  
  	
+########################## Charger related code ##########################
+def frustrated(robot: cozmo.robot.Robot):
+    trigger = cozmo.anim.Triggers.FrustratedByFailureMajor  
+    robot.play_anim_trigger(trigger)
+
+def celebrate(robot: cozmo.robot.Robot):
+    trigger = cozmo.anim.Triggers.CodeLabCelebrate  
+    # robot.play_anim_trigger(trigger,body=True,lift=True,parallel=True)
+    robot.play_anim_trigger(trigger)
+
+def turn_around():
+    global RobotGlobal
+    robot = RobotGlobal
+    robot.turn_in_place(degrees(-180)).wait_for_completed()
+    return
+
+
+def find_charger():
+    global RobotGlobal
+    robot = RobotGlobal
+
+    while(True):
+        
+        behavior = robot.start_behavior(cozmo.behavior.BehaviorTypes.LookAroundInPlace)
+        try: 
+            seen_charger = robot.world.wait_for_observed_charger(timeout=10,include_existing=True)
+        except:
+            seen_charger = None
+        behavior.stop()
+        if(seen_charger != None):
+            #print(seen_charger)
+            return seen_charger
+        frustrated(robot)
+        robot.say_text('Charge?',duration_scalar=0.5).wait_for_completed()
+    return None
+
+def go_to_charger():
+    # Driving towards charger without much precision
+    global RobotGlobal
+    robot = RobotGlobal
+
+    charger = None
+    ''' cf. 08_drive_to_charger_test.py '''
+    # see if Cozmo already knows where the charger is
+    if robot.world.charger:
+        # make sure Cozmo was not delocalised after observing the charger
+        if robot.world.charger.pose.is_comparable(robot.pose):
+            print("Cozmo already knows where the charger is!")
+            charger = robot.world.charger
+        else:
+            # Cozmo knows about the charger, but the pose is not based on the
+            # same origin as the robot (e.g. the robot was moved since seeing
+            # the charger) so try to look for the charger first
+            pass
+    if not charger:
+        charger = find_charger()
+    
+    action = robot.go_to_object(charger,distance_from_object=distance_mm(80), in_parallel=False, num_retries=5)
+    #action = robot.go_to_pose(charger.pose)
+    action.wait_for_completed()
+    return charger
+
+def disp_coord(charger: cozmo.objects.Charger):
+    # Debugging function used to diplay coordinates of objects
+    # (Not currently used)
+    global RobotGlobal
+    robot = RobotGlobal
+
+    r_coord = robot.pose.position #.x .y .z, .rotation otherwise
+    r_zRot = robot.pose_angle.degrees # or .radians
+    c_coord = charger.pose.position
+    c_zRot = charger.pose.rotation.angle_z.degrees
+
+    print('Recorded coordinates of the robot and charger:')
+    print('Robot:',end=' ')
+    print(r_coord)
+    print(r_zRot)
+    print('Charger:',end=' ')
+    print(c_coord)
+    print(c_zRot)
+    print('\n')
+
+PI = 3.14159265359
+def clip_angle(angle=3.1415):
+	# Allow Cozmo to turn the least possible. Without it, Cozmo could
+	# spin on itself several times or turn for instance -350 degrees
+	# instead of 10 degrees. 
+    global PI
+
+    # Retreive supplementary turns (in radians)
+    while(angle >= 2*PI):
+        angle -= 2*PI
+    while(angle <= -2*PI):
+        angle += 2*PI
+    # Select shortest rotation to reach the target
+    if(angle > PI):
+    	angle -= 2*PI
+    elif(angle < -PI):
+    	angle += 2*PI
+    return angle
+
+def check_tol(charger: cozmo.objects.Charger,dist_charger=40):
+    # Check if the position tolerance in front of the charger is respected
+    global RobotGlobal
+    robot = RobotGlobal
+    global PI
+
+    distance_tol = 5 # mm, tolerance for placement error
+    angle_tol = 5*PI/180 # rad, tolerance for orientation error
+
+    try: 
+        charger = robot.world.wait_for_observed_charger(timeout=2,include_existing=True)
+    except:
+        print('WARNING: Cannot see the charger to verify the position.')
+
+    # Calculate positions
+    r_coord = [0,0,0]
+    c_coord = [0,0,0]
+    # Coordonates of robot and charger
+    r_coord[0] = robot.pose.position.x #.x .y .z, .rotation otherwise
+    r_coord[1] = robot.pose.position.y
+    r_coord[2] = robot.pose.position.z
+    r_zRot = robot.pose_angle.radians # .degrees or .radians
+    c_coord[0] = charger.pose.position.x
+    c_coord[1] = charger.pose.position.y
+    c_coord[2] = charger.pose.position.z
+    c_zRot = charger.pose.rotation.angle_z.radians
+
+    # Create target position 
+    # dist_charger in mm, distance if front of charger
+    c_coord[0] -=  dist_charger*math.cos(c_zRot)
+    c_coord[1] -=  dist_charger*math.sin(c_zRot)
+
+    # Direction and distance to target position (in front of charger)
+    distance = math.sqrt((c_coord[0]-r_coord[0])**2 + (c_coord[1]-r_coord[1])**2 + (c_coord[2]-r_coord[2])**2)
+
+    if(distance < distance_tol and math.fabs(r_zRot-c_zRot) < angle_tol):
+    	return 1
+    else: 
+    	return 0
+
+def final_adjust(charger: cozmo.objects.Charger,dist_charger=40,speed=40,critical=False):
+    # Final adjustement to properly face the charger.
+    # The position can be adjusted several times if 
+    # the precision is critical, i.e. when climbing
+    # back onto the charger.  
+    global RobotGlobal
+    robot = RobotGlobal
+    global PI
+
+    while(True):
+        # Calculate positions
+	    r_coord = [0,0,0]
+	    c_coord = [0,0,0]
+	    # Coordonates of robot and charger
+	    r_coord[0] = robot.pose.position.x #.x .y .z, .rotation otherwise
+	    r_coord[1] = robot.pose.position.y
+	    r_coord[2] = robot.pose.position.z
+	    r_zRot = robot.pose_angle.radians # .degrees or .radians
+	    c_coord[0] = charger.pose.position.x
+	    c_coord[1] = charger.pose.position.y
+	    c_coord[2] = charger.pose.position.z
+	    c_zRot = charger.pose.rotation.angle_z.radians
+
+	    # Create target position 
+	    # dist_charger in mm, distance if front of charger
+	    c_coord[0] -=  dist_charger*math.cos(c_zRot)
+	    c_coord[1] -=  dist_charger*math.sin(c_zRot)
+
+	    # Direction and distance to target position (in front of charger)
+	    distance = math.sqrt((c_coord[0]-r_coord[0])**2 + (c_coord[1]-r_coord[1])**2 + (c_coord[2]-r_coord[2])**2)
+	    vect = [c_coord[0]-r_coord[0],c_coord[1]-r_coord[1],c_coord[2]-r_coord[2]]
+	    # Angle of vector going from robot's origin to target's position
+	    theta_t = math.atan2(vect[1],vect[0])
+
+	    print('CHECK: Adjusting position')
+	    # Face the target position
+	    angle = clip_angle((theta_t-r_zRot))
+	    robot.turn_in_place(radians(angle)).wait_for_completed()
+	    # Drive toward the target position
+	    robot.drive_straight(distance_mm(distance),speed_mmps(speed)).wait_for_completed()
+	    # Face the charger
+	    angle = clip_angle((c_zRot-theta_t))
+	    robot.turn_in_place(radians(angle)).wait_for_completed()
+
+        # In case the robot does not need to climb onto the charger
+	    if not critical:
+	        break
+	    elif(check_tol(charger,dist_charger)):
+	    	print('CHECK: Robot aligned relativ to the charger.')
+	    	break
+    return
+
+def restart_procedure(charger: cozmo.objects.Charger):
+    global RobotGlobal
+    robot = RobotGlobal
+
+    robot.stop_all_motors()
+    robot.set_lift_height(height=0.5,max_speed=10,in_parallel=True).wait_for_completed()
+    robot.pose.invalidate()
+    charger.pose.invalidate()
+    print('ABORT: Driving away')
+    #robot.drive_straight(distance_mm(150),speed_mmps(80),in_parallel=False).wait_for_completed()
+    robot.drive_wheels(80,80,duration=2)
+    turn_around()
+    robot.set_lift_height(height=0,max_speed=10,in_parallel=True).wait_for_completed()
+    # Restart procedure
+    get_on_charger()
+    return
+
+def get_on_charger():
+    global RobotGlobal
+    robot = RobotGlobal
+    global pitch_threshold
+
+    robot.set_head_angle(degrees(0),in_parallel=False).wait_for_completed()
+    pitch_threshold = math.fabs(robot.pose_pitch.degrees)
+    pitch_threshold += 1 # Add 1 degree to threshold
+    print('Pitch threshold: ' + str(pitch_threshold))
+
+    # Drive towards charger
+    go_to_charger()
+
+    # Let Cozmo first look for the charger once again. The coordinates
+    # tend to be too unprecise if an old coordinate system is kept.
+    if robot.world.charger is not None and robot.world.charger.pose.is_comparable(robot.pose):
+        robot.world.charger.pose.invalidate()
+    charger = find_charger()
+
+    # Adjust position in front of the charger
+    final_adjust(charger,critical=True)
+    
+    # Turn around and start going backward
+    turn_around()
+    robot.drive_wheel_motors(-120,-120)
+    robot.set_lift_height(height=0.5,max_speed=10,in_parallel=True).wait_for_completed()
+    robot.set_head_angle(degrees(0),in_parallel=True).wait_for_completed()
+
+    # This section allow to wait for Cozmo to arrive on its charger
+    # and detect eventual errors. The whole procedure will be restarted
+    # in case something goes wrong.
+    timeout = 2 # seconds before timeout  #+++ was: 1
+    t = 0
+    # Wait for back wheels to climb on charger
+    while(True):
+        time.sleep(.1)
+        t += 0.1
+        if(t >= timeout):
+            print('ERROR: robot timed out before climbing on charger.')
+            restart_procedure(charger)
+            return
+        elif(math.fabs(robot.pose_pitch.degrees) >= pitch_threshold):
+            print('CHECK: backwheels on charger.')
+            break
+    # Wait for front wheels to climb on charger
+    timeout = 2
+    t = 0
+    while(True):
+        time.sleep(.1)
+        t += 0.1
+        if(math.fabs(robot.pose_pitch.degrees) > 20 or t >= timeout):
+            # The robot is climbing on charger's wall -> restart
+            print('ERROR: robot climbed on charger\'s wall or timed out.')
+            restart_procedure(charger)
+            return
+        elif(math.fabs(robot.pose_pitch.degrees) < pitch_threshold):
+            print('CHECK: robot on charger, backing up on pins.')
+            robot.stop_all_motors()
+            break
+
+    # Final backup onto charger's contacts
+    robot.set_lift_height(height=0,max_speed=10,in_parallel=True).wait_for_completed()
+    robot.backup_onto_charger(max_drive_time=3)
+    if(robot.is_on_charger):
+    	print('PROCEDURE SUCCEEDED')
+    else: 
+    	restart_procedure(charger)
+    	return
+
+    # Celebrate success
+    robot.drive_off_charger_contacts().wait_for_completed()
+    celebrate(robot) # A small celebration where only the head moves
+    robot.backup_onto_charger(max_drive_time=3)
+    return
+
+########################################################################################################
+
+
+
+
+#----------------------------------------------------------------
+def goToCharger(robot: cozmo.robot.Robot):
+	
+	# +++ todo: go_to_pose is not accurate enough. Therefore, stop in front of the charger looking to it, find the charger, adjust robot position, and then back up. 
+	# +++ todo: When on charger, drive off chager contacts. 
+
+	if (robot.is_on_charger):
+		robot.drive_off_charger_contacts(robot).wait_for_completed()
+		robot.drive_straight(distance_mm(100), speed_mmps(100))
+	else:
+		get_on_charger()
+	
+		# robot.go_to_pose(Pose(150, 0, 0, angle_z=degrees(180))).wait_for_completed()
+		# Charger = robot.world.wait_for_observed_charger(timeout=2, include_existing=True)
+		# if (Charger):
+			
+			# YPos = robot.world.charger.pose.position.y
+			# AngleZ = robot.world.charger.pose.rotation.angle_z.degrees
+			# print ("Charger Y:" + str(round(YPos)) + " Angle:" + str(round(AngleZ)) )
+			
+			# # if (math.fabs(YPos) > 15): 
+				# # pass # adjust position
+			
+			# robot.go_to_pose(Pose(100, YPos, 0, angle_z=degrees(AngleZ-180))).wait_for_completed()
+			
+			# robot.backup_onto_charger(max_drive_time=5)
+			# if (robot.is_on_charger):
+				# print ("Success!")
+			
+		# else: 
+			# print ("Sorry, cannot see the charger. Have you moved it away?")
+
+
 #----------------------------------------------------------------	
 def cubeChangeColor (robot: cozmo.robot.Robot, IndexCube, Color):
 	cols = [cozmo.lights.off_light] * 4
+	
+	if (IndexCube == CubeIndexGlobal):							# the selected cube gets a blue light 
+		cols[3] = cozmo.lights.blue_light
+	
 	for i in range(robot.world.light_cubes[IndexCube].object_id): # cube 1 gets 1 light, cube 2 gets 2 lights,  cube 3 gets 3 lights
 		if (Color == "green"):
 			cols[i] = cozmo.lights.green_light
@@ -605,6 +943,7 @@ def tick (parent, robot: cozmo.robot.Robot):
 	global CubeIndexGlobal
 	global LCubeWindowStatusBar
 	global LMotionWindowStatusBar
+	global LStatusBar
 
 	# -------------Cubes--------------------
 	try:
@@ -644,7 +983,7 @@ def tick (parent, robot: cozmo.robot.Robot):
 	YPos   = round(robot.world.light_cubes[CubeIndexGlobal].pose.position.y)
 	ZPos   = round(robot.world.light_cubes[CubeIndexGlobal].pose.position.z)
 	AngleZ = round(robot.world.light_cubes[CubeIndexGlobal].pose.rotation.angle_z.degrees)
-	LCubeWindowStatusBar.config (text = "Cube" + str(ID) + ": X=" + str(XPos) + ", Y=" + str(YPos) + ", Z=" + str(ZPos) + ", " + str(AngleZ) + "°")
+	LCubeWindowStatusBar.config (text = "Cube" + str(ID) + ": X=" + str(XPos) + ", Y=" + str(YPos) + ", Z=" + str(ZPos) + ", " + str(AngleZ) + "° Batt:" + robot.world.light_cubes[CubeIndexGlobal].battery_str)
 	
 	# Motion Window Status bar
 	XPos   = round(robot.pose.position.x)
@@ -653,7 +992,13 @@ def tick (parent, robot: cozmo.robot.Robot):
 	AngleZ = round(robot.pose.rotation.angle_z.degrees)
 	LMotionWindowStatusBar.config (text = "X=" + str(XPos) + ", Y=" + str(YPos) + ", Z=" + str(ZPos) + ", " + str(AngleZ) + "°")
 	
-	
+	# main window status bar 
+	# todo: do it less frequently, we do not need it every second 
+	if (robot.is_charging):
+		ChargerText = ", Charging"
+	else:
+		ChargerText = ""
+	LStatusBar.config (text = "Battery " +  str(round(robot.battery_voltage, 1)) + " V = " + str (round ((robot.battery_voltage - 3.7) / (4.7 - 3.7) * 100)) + "%"  + ChargerText)
 	
 	# --------faces------------
 	
@@ -728,6 +1073,7 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	
 	RobotGlobal = robot
 
+	robot.enable_stop_on_cliff(True)
 	
 	# set up the GUI
 	top = tkinter.Tk()
@@ -841,6 +1187,14 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	BPlayFree = Button (motionWindow, text = "play", relief = RAISED, bd=2, command = lambda: playFree(robot))
 	BPlayFree.grid(row=Row, column=3)
 
+	Row+=1
+	LEmpty05 = Label (motionWindow, text="").grid (row=Row, columnspan=3)
+
+	Row+=1
+	BCharger = Button (motionWindow, text = "Go to/from Charger", command = lambda: goToCharger(robot))
+	BCharger.grid(row=Row, column=1, columnspan=2)
+	
+	
 	LMotionWindowStatusBar = Label (motionWindow, text="Status...", bd=2, relief=FLAT, anchor=W)
 	LMotionWindowStatusBar.place (x=0, y=525)
 
@@ -982,6 +1336,10 @@ LineCoords = [0,0,0,0]
 PlayFree = False
 DriveMethod = "DriveStraight"
 
+#### global variables for Luc's charger code
+# Pitch value when head is horizonal, calculated later.
+pitch_threshold = 0
+PI = 3.14159265359
 
 
 		

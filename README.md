@@ -18,6 +18,8 @@ I thank Anki for providing the Cozmo, the SDK and the very useful tutorials.
 I thank Grinning Hermit for providing the Cozmo Explorer Tool which was a great source of inspiration. 
 I thank all who provide great tutorials on Python and TkInter
 
+Special thanks to Lucas Waelti https://github.com/LucasWaelti/ for providing the self_docking algorithm https://github.com/LucasWaelti/Cozmo/blob/master/self_docking/self_docking_v2.py 
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License in the file LICENSE.txt or at

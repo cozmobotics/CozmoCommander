@@ -39,7 +39,5 @@ and damages or injuries caused by the robot.
 *************************************
 see CozmoCommander_en.html in the CozmoCommanderDocumentation folder. 
 
-preview (without pictures, I regret):
-http://htmlpreview.github.io/?https://github.com/cozmobotics/CozmoCommander/blob/master/CozmoCommanderDocumentation/CozmoCommander_en.html
-
+https://cozmobotics.github.io/CozmoCommander/CozmoCommanderDocumentation/CozmoCommander_en.html
 

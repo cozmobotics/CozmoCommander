@@ -24,7 +24,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License in the file LICENSE.txt or at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+    [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0)
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -37,7 +37,5 @@ and damages or injuries caused by the robot.
 
 ## How to start and use CozmoCommander
 *************************************
-see CozmoCommander_en.html in the CozmoCommanderDocumentation folder. 
-
-https://cozmobotics.github.io/CozmoCommander/CozmoCommanderDocumentation/CozmoCommander_en.html
+see [CozmoCommander_en.html](https://cozmobotics.github.io/CozmoCommander/CozmoCommanderDocumentation/CozmoCommander_en.html) in the CozmoCommanderDocumentation folder. 
 

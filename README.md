@@ -10,7 +10,14 @@ By and by, the program got bigger and it is still growing. The "todo" grows fast
 *************
 CozmoCommander opens a Graphical User Interface (GUI) with optional viewers provided by the Cozmo SDK. 
 You can control the Cozmo robot and its interaction with lightcubes and other objects. 
+
+![screenshot](CozmoCommanderDocumentation/images/ScreenshotCozmoCommander.jpg)
+
+
 You can open a 2D map where the position of the robot is tracked and other objects are shown. 
+
+![screenshot](CozmoCommanderDocumentation/images/Screenshot2Dmap.jpg)
+
 
 ## Acknowledgements, license and liability:
 ****************************************

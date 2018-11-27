@@ -26,20 +26,15 @@ Have fun!
 '''
 
 # todo:
-# viewer=4 ... map
 # map button: map ein- und ausschalten (RAISED/SUNKEN) 
 # Würfel durch Anklicken in der Karte selektieren (BCubex invoke) ... programmiert, aber geht nicht 
 # backup_onto_charger(max_drive_time=3)
 # anim_names ... bisher verwende ich nur anim_triggers
-# cliff ...? 
 # drive_wheel_motors für Steuerung auf Kurvenbahnen, nicht so abgehackt. Grafische Eingabemöglichkeit? --> extra project
 # Maus-button drücken und halten, und dann joystick-artig bewegen?  --> extra project
-# headlight ... Infrarot-Beleuchtung (Nacht-Modus) 
 # turn_towards_face ... robot.turn_towards_face(face_to_follow) 
 # enable_facial_expression_estimation ???
 # delete walls (all of them) 
-# Linux: "say" entry and button not visible
-# move robot with cursor keys ... root.bind("<Key>", callbackKey), MapCanvas.bind("<Key>", callbackKey) 
 # play sounds ... see 10_play_sound.py  ... cozmo.audio.AudioEvents
 # map: redraw the axes when the user changes the sizo of the map .... event <Configure> 
 # motion frame: Show robot's coordinates as status bar
@@ -48,6 +43,16 @@ Have fun!
 # When user clicks on map button again, put focus on map 
 # get_on_charger() ... map is not updated. Parallel tasks with threading? 
 # German description (html)
+# get_on_charger() ... optionally exit the program when PROCEDURE SUCCEEDED
+# show a little animation on the map when cube is tapped. Programmed, bot does not work (see drawRingAnimation())
+# ISSUE: "say" entry and button not visible when using viewer=1 ("say" entry and button appear on viewer window) 
+# ISSUE: animation menu doesn't show test when using viewer=1 
+# ISSUE: program hangs when closing the viewer window 
+# take picture/video and save it 
+# multi robot 
+# display robot serial number ... function robot.serial(). Where to put it? Menu --> about 
+# Add a menu. Menu items: help, about, debug level 
+# volume control 
 
 # done:
 # draw cubes in map 2018-09-24
@@ -73,7 +78,21 @@ Have fun!
 # Cube Status line: print bttery status   2018-10-20
 # Integrate get_on_charger() by Lucas Waelti  2018-10-23
 # --- git commit --- 2018-10-23 ---
-
+# map: represent robot as arc, showing its rotation angle 2018-10-23
+# move robot with cursor keys ... root.bind("<Key>", callbackKey), MapCanvas.bind("<Key>", callbackKey)  2018-10-24
+# bugfix: handle situation when a cube is not connected (e.g. battery low). Not yet perfect, but at least I don`t crash. 
+# select a cube by tapping it. Programmed, bot does not work. Program hangs after a few times a cube got tapped.  
+# option --tap ... disable handler for cube tapped event (workaround)
+# option --viewer=4 ... 2D map 
+# option --docc (drive off charger contacts) 
+# option: --dfac (disconnect from all cubes)
+# button to disconnect/connect from/to cubes 
+# debug feature, lets you define a debug level 
+# button to enable color image ... color_image_enabled()
+# button to enable Infraread (night-Mode) ... set_head_light(enable)
+# ISSUE: program hangs when tapping cubes. Workaround: disable tapping via command line option. Solution: enable_block_tap_filter
+# result of cliff detection in status line
+# picked up --> status line 
 
 import sys
 import time
@@ -111,13 +130,19 @@ except ImportError:
     sys.exit('Please run `pip3 install --user math` to run CozmoCommander') 
 
 #-----------------------------------------------------------------
+def debug (Level, Message): 
+	global args
+	if (Level <= args.debug):
+		print (Message)
+	
+#-----------------------------------------------------------------
 def methodDriveStraight ():
 	global BMethodDriveStraight
 	global BMethodGoToPose
 	global DriveMethod
 	global ESpeed
 	
-	print ("Dive straight")
+	debug (3,"Drive straight")
 	BMethodDriveStraight.config (relief = SUNKEN)
 	BMethodGoToPose.config (relief = RAISED)
 	DriveMethod	= "DriveStraight"
@@ -130,7 +155,7 @@ def methodGoToPose ():
 	global DriveMethod
 	global ESpeed
 	
-	print ("Go to pose")
+	debug (3,"Go to pose")
 	BMethodDriveStraight.config (relief = RAISED)
 	BMethodGoToPose.config (relief = SUNKEN)
 	DriveMethod	= "GoToPose"
@@ -166,12 +191,12 @@ def playFree (robot: cozmo.robot.Robot):
 		robot.start_freeplay_behaviors()
 		PlayFree = True
 		BPlayFree.config (relief = SUNKEN)
-		print ("start_freeplay_behaviors")
+		debug (3,"start_freeplay_behaviors")
 	else:	
 		robot.stop_freeplay_behaviors()
 		PlayFree = False
 		BPlayFree.config (relief = RAISED)
-		print ("stop_freeplay_behaviors")
+		debug (3,"stop_freeplay_behaviors")
 		
 		
 #----------------------------------------------------------------	
@@ -179,28 +204,28 @@ def buttonCubeWindowGoto (robot: cozmo.robot.Robot, Distance):
 	global CubeIndexGlobal
 	robot.go_to_object(robot.world.light_cubes[CubeIndexGlobal], distance_mm(Distance)) 
 
-	print ("Button Cube GoTo clicked")
+	debug (3,"Button Cube GoTo clicked")
 
 	#----------------------------------------------------------------	
 def buttonCubeWindowDock (robot: cozmo.robot.Robot, Angle):
 	global CubeIndexGlobal
 	robot.dock_with_cube(robot.world.light_cubes[CubeIndexGlobal], approach_angle=cozmo.util.degrees(Angle), num_retries=2)
 
-	print ("Button Cube Dock clicked")
+	debug (3,"Button Cube Dock clicked")
 
 #----------------------------------------------------------------	
 def buttonCubeWindowLift (robot: cozmo.robot.Robot):
 	global CubeIndexGlobal
 	robot.pickup_object(robot.world.light_cubes[CubeIndexGlobal], num_retries=3)
 
-	print ("Button Cube Lift clicked")
+	debug (3,"Button Cube Lift clicked")
 
 #----------------------------------------------------------------	
 def buttonCubeWindowPlaceOnTop (robot: cozmo.robot.Robot):
 	global CubeIndexGlobal
 	robot.place_on_object(robot.world.light_cubes[CubeIndexGlobal], num_retries=2)
 
-	print ("Button Cube PlaceOnTop clicked")
+	debug (3,"Button Cube PlaceOnTop clicked")
 	
 #----------------------------------------------------------------	
 def buttonCubeWindowRoll (robot: cozmo.robot.Robot):
@@ -224,26 +249,32 @@ def buttonCubeWindowWheelie (robot: cozmo.robot.Robot):
 	except:
 		messagebox.showinfo("Something went wrong...")
 		
-
+#---------------------------------------------------------------------------------
+def buttonCubeWindowDisConnect (robot: cozmo.robot.Robot):
+	global CubesConnected
+	global BCubeDisConnect
+	
+	if CubesConnected:
+		robot.world.disconnect_from_cubes() 
+		CubesConnected = False
+		BCubeDisConnect.config (text = "connect to all cubes")
+	else:
+		robot.world.connect_to_cubes()
+		CubesConnected = True
+		BCubeDisConnect.config (text = "disconnect from all cubes")
+		
 #----------------------------------------------------------------
 def sayText (robot: cozmo.robot.Robot, Text):
 	robot.say_text (Text)
 #----------------------------------------------------------------	
-def buttonCubeX(parent, robot: cozmo.robot.Robot, IndexCube):
+def buttonCubeX(robot: cozmo.robot.Robot, IndexCube):
 	global CubeIndexGlobal
 	global BCubeWindowWhichCube
 	global BCube1
 	global BCube2
 	global BCube3
 	
-	print ("IndexCube " + str(IndexCube) + " Cube Id=" + str(robot.world.light_cubes[IndexCube].object_id) + " visible=" + str(robot.world.light_cubes[IndexCube].is_visible))
-	# try:
-		# # cubeWindow.deiconify()
-		# # BCubeWindowWhichCube.config (text = "Cube" + str(robot.world.light_cubes[IndexCube].object_id))
-		# cubeWindow.config (text = "Cube" + str(robot.world.light_cubes[IndexCube].object_id))
-	# except:
-		# messagebox.showinfo("Error", "Sorry, someone closed the cube window")
-	# #cubeWindow.config (title = "Cube " + str(robot.world.light_cubes[IndexCube].object_id))
+	debug (2,"IndexCube " + str(IndexCube) + " Cube Id=" + str(robot.world.light_cubes[IndexCube].object_id) + " visible=" + str(robot.world.light_cubes[IndexCube].is_visible))
 	
 	BCube1.config (relief=RAISED)
 	BCube2.config (relief=RAISED)
@@ -258,7 +289,7 @@ def buttonCubeX(parent, robot: cozmo.robot.Robot, IndexCube):
 	
 	CubeIndexGlobal = IndexCube
 	
-	print ("Button Cube" + str(IndexCube) + " clicked")
+	debug (3,"Button Cube" + str(IndexCube) + " clicked")
 	
 	
 #----------------------------------------------------------------
@@ -311,7 +342,7 @@ def find_charger():
             seen_charger = None
         behavior.stop()
         if(seen_charger != None):
-            #print(seen_charger)
+            debug (2,seen_charger)
             return seen_charger
         frustrated(robot)
         robot.say_text('Charge?',duration_scalar=0.5).wait_for_completed()
@@ -328,7 +359,7 @@ def go_to_charger():
     if robot.world.charger:
         # make sure Cozmo was not delocalised after observing the charger
         if robot.world.charger.pose.is_comparable(robot.pose):
-            print("Cozmo already knows where the charger is!")
+            debug (1,"Cozmo already knows where the charger is!")
             charger = robot.world.charger
         else:
             # Cozmo knows about the charger, but the pose is not based on the
@@ -354,14 +385,14 @@ def disp_coord(charger: cozmo.objects.Charger):
     c_coord = charger.pose.position
     c_zRot = charger.pose.rotation.angle_z.degrees
 
-    print('Recorded coordinates of the robot and charger:')
-    print('Robot:',end=' ')
-    print(r_coord)
-    print(r_zRot)
-    print('Charger:',end=' ')
-    print(c_coord)
-    print(c_zRot)
-    print('\n')
+    debug (3,'Recorded coordinates of the robot and charger:')
+    debug (3,'Robot:' + str(end=' '))
+    debug (3,r_coord)
+    debug (3,r_zRot)
+    debug (3,'Charger:' + str(end=' '))
+    debug (3,c_coord)
+    debug (3,c_zRot)
+    debug (3,'\n')
 
 PI = 3.14159265359
 def clip_angle(angle=3.1415):
@@ -394,7 +425,7 @@ def check_tol(charger: cozmo.objects.Charger,dist_charger=40):
     try: 
         charger = robot.world.wait_for_observed_charger(timeout=2,include_existing=True)
     except:
-        print('WARNING: Cannot see the charger to verify the position.')
+        debug (1,'WARNING: Cannot see the charger to verify the position.')
 
     # Calculate positions
     r_coord = [0,0,0]
@@ -456,7 +487,7 @@ def final_adjust(charger: cozmo.objects.Charger,dist_charger=40,speed=40,critica
 	    # Angle of vector going from robot's origin to target's position
 	    theta_t = math.atan2(vect[1],vect[0])
 
-	    print('CHECK: Adjusting position')
+	    debug (2,'CHECK: Adjusting position')
 	    # Face the target position
 	    angle = clip_angle((theta_t-r_zRot))
 	    robot.turn_in_place(radians(angle)).wait_for_completed()
@@ -470,7 +501,7 @@ def final_adjust(charger: cozmo.objects.Charger,dist_charger=40,speed=40,critica
 	    if not critical:
 	        break
 	    elif(check_tol(charger,dist_charger)):
-	    	print('CHECK: Robot aligned relativ to the charger.')
+	    	debug (2,'CHECK: Robot aligned relativ to the charger.')
 	    	break
     return
 
@@ -482,7 +513,7 @@ def restart_procedure(charger: cozmo.objects.Charger):
     robot.set_lift_height(height=0.5,max_speed=10,in_parallel=True).wait_for_completed()
     robot.pose.invalidate()
     charger.pose.invalidate()
-    print('ABORT: Driving away')
+    debug (1,'ABORT: Driving away')
     #robot.drive_straight(distance_mm(150),speed_mmps(80),in_parallel=False).wait_for_completed()
     robot.drive_wheels(80,80,duration=2)
     turn_around()
@@ -499,7 +530,7 @@ def get_on_charger():
     robot.set_head_angle(degrees(0),in_parallel=False).wait_for_completed()
     pitch_threshold = math.fabs(robot.pose_pitch.degrees)
     pitch_threshold += 1 # Add 1 degree to threshold
-    print('Pitch threshold: ' + str(pitch_threshold))
+    debug (3,'Pitch threshold: ' + str(pitch_threshold))
 
     # Drive towards charger
     go_to_charger()
@@ -529,11 +560,11 @@ def get_on_charger():
         time.sleep(.1)
         t += 0.1
         if(t >= timeout):
-            print('ERROR: robot timed out before climbing on charger.')
+            debug (1,'ERROR: robot timed out before climbing on charger.')
             restart_procedure(charger)
             return
         elif(math.fabs(robot.pose_pitch.degrees) >= pitch_threshold):
-            print('CHECK: backwheels on charger.')
+            debug (3,'CHECK: backwheels on charger.')
             break
     # Wait for front wheels to climb on charger
     timeout = 2
@@ -543,11 +574,11 @@ def get_on_charger():
         t += 0.1
         if(math.fabs(robot.pose_pitch.degrees) > 20 or t >= timeout):
             # The robot is climbing on charger's wall -> restart
-            print('ERROR: robot climbed on charger\'s wall or timed out.')
+            debug (1,'ERROR: robot climbed on charger\'s wall or timed out.')
             restart_procedure(charger)
             return
         elif(math.fabs(robot.pose_pitch.degrees) < pitch_threshold):
-            print('CHECK: robot on charger, backing up on pins.')
+            debug (3,'CHECK: robot on charger, backing up on pins.')
             robot.stop_all_motors()
             break
 
@@ -555,7 +586,7 @@ def get_on_charger():
     robot.set_lift_height(height=0,max_speed=10,in_parallel=True).wait_for_completed()
     robot.backup_onto_charger(max_drive_time=3)
     if(robot.is_on_charger):
-    	print('PROCEDURE SUCCEEDED')
+    	debug (1,'PROCEDURE SUCCEEDED')
     else: 
     	restart_procedure(charger)
     	return
@@ -611,16 +642,14 @@ def cubeChangeColor (robot: cozmo.robot.Robot, IndexCube, Color):
 	if (IndexCube == CubeIndexGlobal):							# the selected cube gets a blue light 
 		cols[3] = cozmo.lights.blue_light
 	
-	for i in range(robot.world.light_cubes[IndexCube].object_id): # cube 1 gets 1 light, cube 2 gets 2 lights,  cube 3 gets 3 lights
-		if (Color == "green"):
-			cols[i] = cozmo.lights.green_light
-		if (Color == "red"):
-			cols[i] = cozmo.lights.red_light
+	if (robot.world.light_cubes[IndexCube].object_id != None):
+		for i in range(robot.world.light_cubes[IndexCube].object_id): # cube 1 gets 1 light, cube 2 gets 2 lights,  cube 3 gets 3 lights
+			if (Color == "green"):
+				cols[i] = cozmo.lights.green_light
+			if (Color == "red"):
+				cols[i] = cozmo.lights.red_light
 			
-	# if (IndexCube == CubeIndexGlobal):	# +++ geht nicht
-		# cols[3] = "blue"
-			
-	robot.world.light_cubes[IndexCube].set_light_corners(*cols) 
+		robot.world.light_cubes[IndexCube].set_light_corners(*cols) 
 	
 #-------------------------------------------------------------------------
 def animPlay (WhatToPlay):
@@ -629,7 +658,7 @@ def animPlay (WhatToPlay):
 	global AnimLast
 	global RobotGlobal
 	
-	print ("searching for ", WhatToPlay)
+	debug (4,"searching for " + WhatToPlay)
 	AnimLast = WhatToPlay
 
 	
@@ -642,7 +671,7 @@ def animPlay (WhatToPlay):
 			IndexToPlay = Index
 		Index = Index + 1
 	
-	print ("playing ", RobotGlobal.anim_triggers[IndexToPlay].name)
+	debug (3,"playing " + RobotGlobal.anim_triggers[IndexToPlay].name)
 	RobotGlobal.play_anim_trigger(RobotGlobal.anim_triggers[IndexToPlay])
 	
 	
@@ -650,7 +679,7 @@ def animPlay (WhatToPlay):
 def printFaceData (Face):
 	global LFaceData
 	
-	print ("ID:" + str(Face.face_id) + " name = " + Face.name)
+	debug (3,"ID:" + str(Face.face_id) + " name = " + Face.name)
 	LFaceData.config (text = "ID:" + str(Face.face_id) + " name = " + Face.name)
 	
 	# if (Face.is_visible):						# +++ is always true, so it doesn't make sense 
@@ -728,14 +757,9 @@ def onMapDoubleClick (coords):
 	global MapRobotY
 	global RobotGlobal
 	
-	# print ("Got canvas click", coords.x, coords.y)
+	# debug (5,"Got canvas click" + str(coords.x) + str(coords.y))
 	
-	# print (RobotGlobal.pose.position.x, RobotGlobal.pose.position.x)
-	
-	# X = coords.x - MapWidth/2
-	# X = X / MapWidth * MapScale
-	# Y = coords.y - MapHeight/2
-	# Y = - Y / MapWidth * MapScale
+	# debug (5, str(RobotGlobal.pose.position.x),  + str(RobotGlobal.pose.position.x))
 	
 	MapCanvas.create_line (coords.x - 4, coords.y, coords.x + 4, coords.y)
 	MapCanvas.create_line (coords.x, coords.y - 4, coords.x, coords.y + 4)
@@ -749,7 +773,7 @@ def onMapDoubleClick (coords):
 		
 	Angle = angle360 (DeltaX, DeltaY)
 	
-	# print (DeltaX, DeltaY, Angle)
+	debug (5, str(DeltaX) + str(DeltaY) + str(Angle))
 	
 	RobotGlobal.go_to_pose(Pose(X, Y, 0, angle_z=degrees(Angle)), relative_to_robot=False)
 	
@@ -776,6 +800,8 @@ def createMap (robot: cozmo.robot.Robot):
 		MapCanvas = Canvas (MapWindow, width=900, height=600)
 		MapCanvas.pack()
 		
+		MapCanvas.bind ("<Key>", keyPressed)
+		
 		MapCanvas.create_line(0, MapHeight/2, MapWidth, MapHeight/2, fill="#C0C0C0")
 		MapCanvas.create_line(MapWidth/2, 0, MapWidth/2, MapHeight, fill="#C0C0C0")
 		
@@ -799,13 +825,16 @@ def createMap (robot: cozmo.robot.Robot):
 		MapCanvas.bind ('<Double-1>', onMapDoubleClick)
 		
 		# RobotCircleRadius = 5
-		RobotCircle = MapCanvas.create_oval ( 
-			world2canvasX(0) - RobotCircleRadius, 
-			world2canvasY(0) - RobotCircleRadius, 
-			world2canvasX(0) + RobotCircleRadius, 
-			world2canvasY(0) + RobotCircleRadius
+		RobotCircle = MapCanvas.create_arc ( 
+			world2canvasX(0) - 3*RobotCircleRadius, 
+			world2canvasY(0) - 3*RobotCircleRadius, 
+			world2canvasX(0) + 3*RobotCircleRadius, 
+			world2canvasY(0) + 3*RobotCircleRadius,
+			start = 330,
+			extent = 60,
+			fill = "black"
 			)
-		MapCanvas.itemconfig(RobotCircle, fill="black")
+		# MapCanvas.itemconfig(RobotCircle, fill="black")
 
 		# for Index in range(4):
 		for Index in range(3):
@@ -820,9 +849,9 @@ def createMap (robot: cozmo.robot.Robot):
 		# MapCanvas.tag_bind (CubeSquares[0], '<Double-1>', BCube1.invoke()) # funktioniert nicht 
 		# MapCanvas.tag_bind (CubeSquares[1], '<Double-1>', BCube2.invoke())
 		# MapCanvas.tag_bind (CubeSquares[2], '<Double-1>', BCube3.invoke())
-		MapCanvas.tag_bind (CubeSquares[0], '<Double-1>', lambda: buttonCubeX(root, robot, 1))   #buttonCubeX(parent, robot: cozmo.robot.Robot, IndexCube)
-		MapCanvas.tag_bind (CubeSquares[1], '<Double-1>', lambda: buttonCubeX(root, robot, 2))
-		MapCanvas.tag_bind (CubeSquares[2], '<Double-1>', lambda: buttonCubeX(root, robot, 3))
+		MapCanvas.tag_bind (CubeSquares[0], '<Double-1>', lambda: buttonCubeX(robot, 1))   #buttonCubeX(parent, robot: cozmo.robot.Robot, IndexCube)
+		MapCanvas.tag_bind (CubeSquares[1], '<Double-1>', lambda: buttonCubeX(robot, 2))
+		MapCanvas.tag_bind (CubeSquares[2], '<Double-1>', lambda: buttonCubeX(robot, 3))
 		
 		MapCanvas.bind ('<B1-Motion>', drawLineMouseDown)
 		# MapCanvas.bind ('<Motion>', drawLineMouseUp)
@@ -849,11 +878,12 @@ def drawMap (robot: cozmo.robot.Robot):
 		try:
 			# MapCanvas.create_line   (MapRobotX / MapScale * MapWidth + MapWidth/2, - MapRobotY / MapScale * MapWidth  + MapHeight/2, X / 1000 * MapWidth + MapWidth/2, - Y / 1000 * MapWidth  + MapHeight/2)
 			MapCanvas.coords (RobotCircle, 
-				world2canvasX(MapRobotX) - RobotCircleRadius, 
-				world2canvasY(MapRobotY) - RobotCircleRadius, 
-				world2canvasX(MapRobotX) + RobotCircleRadius, 
-				world2canvasY(MapRobotY) + RobotCircleRadius
+				world2canvasX(MapRobotX) - 3*RobotCircleRadius, 
+				world2canvasY(MapRobotY) - 3*RobotCircleRadius, 
+				world2canvasX(MapRobotX) + 3*RobotCircleRadius, 
+				world2canvasY(MapRobotY) + 3*RobotCircleRadius
 				)
+			MapCanvas.itemconfig (RobotCircle, start = robot.pose.rotation.angle_z.degrees - 30, extent = 60)
 			MapCanvas.create_line   (world2canvasX(MapRobotX) , world2canvasY(MapRobotY), world2canvasX(X), world2canvasY(Y))
 		except:
 			MapActive = False
@@ -887,6 +917,24 @@ def drawMap (robot: cozmo.robot.Robot):
 	top.after (205, lambda: drawMap(robot))
 
 #----------------------------------------------------------------------------
+def drawRingAnimation (PosX, PosY, MaxRad, Rad=0, Count=0, Ring=None):
+	global MapCanvas
+	
+	debug (5,"PosX:" + str(PosX) + " PosY:" + str(PosY) + " MaxRad:" + str(MaxRad) + " Rad:" + str(Rad) + " Count:" + str(Count) + " Ring:" + str(Ring))
+	
+	if (Ring==None):	# first call 
+		Ring = MapCanvas.create_oval (PosX-1,PosY-1,PosX+1,PosY+1)
+	else:				# subsequent calls
+		MapCanvas.coords (Ring, PosX-Rad, PosY-Rad,PosX+Rad,PosY+Rad)
+	
+	Rad=MaxRad/10*Count
+	
+	if (Count < 10):
+		MapCanvas.after (20, lambda: drawRingAnimation (PosX, PosY, MaxRad, Rad, Count+1, Ring)) 
+	else:
+		Ring.destroy() # here I get an error message "AttributeError: 'int' object has no attribute 'destroy'"
+
+#----------------------------------------------------------------------------
 def drawLineMouseUp (event):
 	global FlagMouseDown
 	global LineCoords
@@ -903,7 +951,7 @@ def drawLineMouseUp (event):
 		DeltaY = canvas2worldY(LineCoords[3]) - canvas2worldY(LineCoords[1])
 		
 		Angle = angle360 (DeltaX, DeltaY)
-		print ("Angle: ", Angle)
+		debug (5,"Angle: " + str(Angle))
 		# Angle += 90
 		# if (Angle > 360):
 			# Angle -= 360
@@ -914,9 +962,9 @@ def drawLineMouseUp (event):
 					relative_to_robot=False)			
 
 		if Wall:
-			print("Wall created successfully")
+			debug (3,"Wall created successfully")
 		else:
-			print ("Could not create wall")
+			debug (1,"Could not create wall")
 
 #----------------------------------------------------------------------------
 def drawLineMouseDown (event):
@@ -945,15 +993,15 @@ def tick (parent, robot: cozmo.robot.Robot):
 	global LMotionWindowStatusBar
 	global LStatusBar
 
-	# -------------Cubes--------------------
+	# ---Cubes---
 	try:
 		VisibleCube = robot.world.wait_for_observed_light_cube(timeout=0.1)
 		# actually we don't need VisibleCube, and for now it doesn't matter if cubes are found. 
 		# We call this function for its side effect, i.e. filling in the data into robot.world.light_cubes[]
-		# print("Found cube: %s" % cube.object_id )
+		debug (7,"Found cube: " + str(VisibleCube.object_id) )
 		pass
 	except asyncio.TimeoutError:
-		# print("Didn't find a cube") 
+		debug (6,"Didn't find a cube") 
 		pass
 	
 	if robot.world.light_cubes[1].is_visible:
@@ -978,12 +1026,13 @@ def tick (parent, robot: cozmo.robot.Robot):
 			cubeChangeColor (robot, IndexCube, "red")
 	
 	# Cube Window Status bar
-	ID     = robot.world.light_cubes[CubeIndexGlobal].object_id
-	XPos   = round(robot.world.light_cubes[CubeIndexGlobal].pose.position.x)
-	YPos   = round(robot.world.light_cubes[CubeIndexGlobal].pose.position.y)
-	ZPos   = round(robot.world.light_cubes[CubeIndexGlobal].pose.position.z)
-	AngleZ = round(robot.world.light_cubes[CubeIndexGlobal].pose.rotation.angle_z.degrees)
-	LCubeWindowStatusBar.config (text = "Cube" + str(ID) + ": X=" + str(XPos) + ", Y=" + str(YPos) + ", Z=" + str(ZPos) + ", " + str(AngleZ) + "° Batt:" + robot.world.light_cubes[CubeIndexGlobal].battery_str)
+	if (robot.world.light_cubes[CubeIndexGlobal].object_id != None):
+		ID     = robot.world.light_cubes[CubeIndexGlobal].object_id
+		XPos   = round(robot.world.light_cubes[CubeIndexGlobal].pose.position.x)
+		YPos   = round(robot.world.light_cubes[CubeIndexGlobal].pose.position.y)
+		ZPos   = round(robot.world.light_cubes[CubeIndexGlobal].pose.position.z)
+		AngleZ = round(robot.world.light_cubes[CubeIndexGlobal].pose.rotation.angle_z.degrees)
+		LCubeWindowStatusBar.config (text = "Cube" + str(ID) + ": X=" + str(XPos) + ", Y=" + str(YPos) + ", Z=" + str(ZPos) + ", " + str(AngleZ) + "° Batt:" + robot.world.light_cubes[CubeIndexGlobal].battery_str)
 	
 	# Motion Window Status bar
 	XPos   = round(robot.pose.position.x)
@@ -998,7 +1047,20 @@ def tick (parent, robot: cozmo.robot.Robot):
 		ChargerText = ", Charging"
 	else:
 		ChargerText = ""
-	LStatusBar.config (text = "Battery " +  str(round(robot.battery_voltage, 1)) + " V = " + str (round ((robot.battery_voltage - 3.7) / (4.7 - 3.7) * 100)) + "%"  + ChargerText)
+		
+	if (robot.is_cliff_detected):
+		CliffText = ", Cliff!"
+	else:
+		 CliffText= ""
+		
+	
+	if (robot.is_picked_up):
+		PickText = ", picked up"
+	else:
+		 PickText= ""
+		
+		
+	LStatusBar.config (text = "Battery " +  str(round(robot.battery_voltage, 1)) + " V = " + str (round ((robot.battery_voltage - 3.7) / (4.7 - 3.7) * 100)) + "%"  + ChargerText + CliffText + PickText)
 	
 	# --------faces------------
 	
@@ -1030,6 +1092,81 @@ def tick (parent, robot: cozmo.robot.Robot):
 	# --- repeatedly restart this function ---
 	parent.after (1000, lambda: tick(parent, robot))
 
+#--------------------------------------------------------
+def keyPressed (event):
+	global BForward
+	global BBack
+	global BLeft
+	global BRight
+	global BCube1
+	global BCube2
+	global BCube3
+
+	# if EDist != EDist.focus_get():
+	
+	if event.keysym == "Up":
+		BForward.invoke()
+	elif event.keysym == "Down":
+		BBack.invoke()
+	elif event.keysym == "Left":
+		BLeft.invoke()
+	elif event.keysym == "Right":
+		BRight.invoke()
+	elif event.keysym == "F1":
+		BCube1.invoke()
+	elif event.keysym == "F2":
+		BCube2.invoke()
+	elif event.keysym == "F3":
+		BCube3.invoke()
+	else:
+		debug (5,"Key pressed " + event.keysym)
+
+#--------------------------------------------------------------------------------------
+def on_cube_tapped(evt, **kw): 
+	global MapActive
+	
+	debug (5,"tapped! " + str(evt))
+	debug (3,"object_id =     " + str(evt.obj.object_id))
+	debug (3,"tap_count =     " + str(evt.tap_count))
+	debug (3,"tap_duration =  " + str(evt.tap_duration))
+	debug (3,"tap_intensity = " + str(evt.tap_intensity))
+	
+	# find button which matches the object_id
+	ButtonIndex = -1
+	for Count in range(1,4):
+		if (RobotGlobal.world.light_cubes[Count].object_id == evt.obj.object_id):
+			ButtonIndex = Count
+	debug (5,"ButtonIndex: " + str (ButtonIndex))
+	
+	if (ButtonIndex != -1):
+		buttonCubeX(RobotGlobal, ButtonIndex)
+	
+	# if (MapActive == True):
+		# PosX = world2canvasX (evt.obj.pose.position.x)
+		# PosY = world2canvasY (evt.obj.pose.position.y)
+		
+		# drawRingAnimation (PosX, PosY, evt.tap_intensity / 4) # does not yet work
+
+#------------------------------------------------------------------------------------
+def infrared (robot: cozmo.robot.Robot, Button):
+	# print (Button.cget ('relief'))
+	if (Button.cget ('relief') == RAISED):
+		robot.set_head_light(True)
+		Button.config (relief=SUNKEN)
+	else:
+		robot.set_head_light(False)
+		Button.config (relief=RAISED)
+		
+##------------------------------------------------------------------------------------
+def colorImage (robot: cozmo.robot.Robot, Button):
+	# print (Button.cget ('relief'))
+	if (Button.cget ('relief') == RAISED):
+		robot.camera.color_image_enabled=True
+		Button.config (relief=SUNKEN)
+	else:
+		robot.camera.color_image_enabled=False
+		Button.config (relief=RAISED)
+		
 #----------------robotMainProgram----------------------------------------------------
 def robotMainProgram(robot: cozmo.robot.Robot):
 
@@ -1068,7 +1205,10 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	global CAnims
 	global AnimLast
 	global BPlayFree
-
+	global CubesConnected
+	global BCubeDisConnect
+	
+	global args
 	global RobotGlobal
 	
 	RobotGlobal = robot
@@ -1137,6 +1277,7 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	EDist = Entry (motionWindow, bd=2, width=7)
 	EDist.grid(row=Row, column=2)
 	EDist.insert (0, "100")	# start value
+	EDist.bind ("<Key>", None)
 	LDist1 = Label (motionWindow, text="mm")
 	LDist1.grid(row=Row, column=3, sticky=W)
 
@@ -1177,7 +1318,7 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	BLift.invoke() 	# set lift down at startup
 	
 	Row+=2
-	LEmpty04 = Label (motionWindow, text="").grid (row=Row, columnspan=3)
+	LEmpty05 = Label (motionWindow, text="").grid (row=Row, columnspan=3)
 
 	Row+=1
 	BCanvas = Button (motionWindow, text = "map", command = lambda: createMap(robot)) 
@@ -1188,7 +1329,7 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	BPlayFree.grid(row=Row, column=3)
 
 	Row+=1
-	LEmpty05 = Label (motionWindow, text="").grid (row=Row, columnspan=3)
+	LEmpty06 = Label (motionWindow, text="").grid (row=Row, columnspan=3)
 
 	Row+=1
 	BCharger = Button (motionWindow, text = "Go to/from Charger", command = lambda: goToCharger(robot))
@@ -1208,11 +1349,11 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	LEmpty10 = Label (cubeWindow, text="").grid (row=Row, columnspan=3)
 	
 	Row+=1
-	BCube1 = Button(cubeWindow, text = "Cube" + str(robot.world.light_cubes[1].object_id), relief=SUNKEN, bd=5, command = lambda: buttonCubeX(motionWindow, robot, 1))
+	BCube1 = Button(cubeWindow, text = "Cube" + str(robot.world.light_cubes[1].object_id), relief=SUNKEN, bd=5, command = lambda: buttonCubeX(robot, 1))
 	BCube1.grid(row=Row, column=1)
-	BCube2 = Button(cubeWindow, text = "Cube" + str(robot.world.light_cubes[2].object_id), relief=RAISED, bd=5, command = lambda: buttonCubeX(motionWindow, robot, 2))
+	BCube2 = Button(cubeWindow, text = "Cube" + str(robot.world.light_cubes[2].object_id), relief=RAISED, bd=5, command = lambda: buttonCubeX(robot, 2))
 	BCube2.grid(row=Row, column=2)
-	BCube3 = Button(cubeWindow, text = "Cube" + str(robot.world.light_cubes[3].object_id), relief=RAISED, bd=5, command = lambda: buttonCubeX(motionWindow, robot, 3))
+	BCube3 = Button(cubeWindow, text = "Cube" + str(robot.world.light_cubes[3].object_id), relief=RAISED, bd=5, command = lambda: buttonCubeX(robot, 3))
 	BCube3.grid(row=Row, column=3)
 
 	Row+=1
@@ -1241,6 +1382,9 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	Row+=1
 	BCubeWindowRoll = Button (cubeWindow, text="wheelie", command = lambda: buttonCubeWindowWheelie(robot))
 	BCubeWindowRoll.grid(row=Row, column=1, sticky=W)
+	Row+=1
+	BCubeDisConnect = Button (cubeWindow, text = "disconnect from all cubes", width=20, command = lambda: buttonCubeWindowDisConnect(robot)) 
+	BCubeDisConnect.grid(row=Row, column=1, columnspan=3, sticky=W)
 	
 	LCubeWindowStatusBar = Label (cubeWindow, text="Status...", bd=2, relief=FLAT, anchor=W)
 	LCubeWindowStatusBar.place (x=0, y=525)
@@ -1280,15 +1424,40 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 	AnimChosen.set (AnimNames[0])
 	AnimLast = AnimNames[0]
 	CAnims = OptionMenu(FAnims, AnimChosen, *AnimNames, command=animPlay)	
-	CAnims.pack(side=LEFT)
+	CAnims.grid(row=1, column=1)
 	BAnims = Button (FAnims, text="repeat", command=lambda: animPlay(AnimLast))
-	BAnims.pack (side=RIGHT)
+	BAnims.grid (row=1, column=2)
+	
+	LEmpty40 = Label (FAnims, text="")
+	LEmpty40.grid(row=1, column=4)
+	BInfrared = Button (FAnims, text="infrared", command = lambda: infrared (robot, BInfrared)) 
+	BInfrared.grid(row=1, column=5)
+	
+	LEmpty50 = Label (FAnims, text="")
+	LEmpty50.grid(row=1, column=6)
+	BColorImage = Button (FAnims, text="color", command = lambda: colorImage (robot, BColorImage)) 
+	BColorImage.grid(row=1, column=7)
+	
 	FAnims.pack (side=BOTTOM)
 		
+	# FCamera = Frame(width=900)
+	# FCamera.pack (side=BOTTOM)
 		
+	# --- event handlers etc. 
 		
+	top.bind ("<Key>", keyPressed)	
+	
+	if (args.tap != 0):
+		robot.add_event_handler(cozmo.objects.EvtObjectTapped, on_cube_tapped) 	
+		robot.world.enable_block_tap_filter(True)
+	
+	if (args.dfac != 0):
+		buttonCubeWindowDisConnect(robot)
+		BCubeDisConnect.config (state = DISABLED)
 		
-		
+	if (StartMap):
+		BCanvas.invoke()
+	
 	# start background process(es) 
 	top.after (1000, lambda: tick(top, robot))
 
@@ -1298,7 +1467,11 @@ def robotMainProgram(robot: cozmo.robot.Robot):
 #---------------------------------start-working-------------------------
 # parse arguments 
 parser = argparse.ArgumentParser(description="Simple graphic interface for Cozmo")
-parser.add_argument("--viewer", type=str, default=0, help="0 = no viewer (default), 1 = Camera, 2 = 3D, 3 = Camera+3D")
+parser.add_argument("--viewer", type=str, default=0, help="0 = no viewer (default), 1 = Camera, 2 = 3D, 4 = 2D map, combinations are possible like 5=Camera+2Dmap")
+parser.add_argument("--dfac", type=int, default=0, help="1.. disconnect from all cubes. Save cube batteries.")
+parser.add_argument("--docc", type=int, default=1, help="1 (default) ...drive off charger contacts, 0 ... stay on charger contacts")
+parser.add_argument("--tap",  type=int, default=1, help="1 (default) ...enable tapping cubes, 0 ...disable tapping cubes")
+parser.add_argument("--debug", type=int, default=0, help="enable debug messages on console. 0 (default) ... no debug messages, greater number = more messages")
 args = parser.parse_args()
 
 Use3D  = False
@@ -1311,6 +1484,12 @@ if ((Viewer & 1) != 0):
 if ((Viewer & 2) != 0):
 		Use3D = True
 if ((Viewer & 4) != 0):
+	StartMap = True
+else:
+	StartMap = False
+
+
+if (args.docc == 0):
 		cozmo.robot.Robot.drive_off_charger_on_connect = False  # Cozmo can stay on his charger for this example 
 		
 # global variables
@@ -1382,6 +1561,9 @@ LMotionWindowStatusBar	= 0
 LStatusBar				= 0
 CAnims					= 0
 BPlayFree				= 0
+CubesConnected			= True
+BCubeDisConnect			= 0
+
 
 # start main program
 #cozmo.robot.Robot.drive_off_charger_on_connect = False  # Cozmo can stay on charger for now 

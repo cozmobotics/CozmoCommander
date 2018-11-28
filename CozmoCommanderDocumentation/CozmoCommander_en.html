@@ -1,14 +1,18 @@
 <h1>CozmoCommander</h1>
 <p>Use the Anki Cozmo robot with a GUI. Uses Python with TkInter.</p>
 
-<p>I am new to Cozmo, new to GUI programming and still new to Python. <br>
-So this project is definitely not programmed in the most efficient or most elegant way. <br>
+<p>Welcome to Cozmo Commander. I hope you will find this program useful for learning and understanding Cozmo and the SDK. <br>
+I myself work on this program for exactly the same reason, I learn while developing it. <br>
 At the beginning I only wanted to find out how the world coordinate system works. <br>
-By and by, the program got bigger and it is still growing. The "todo" grows faster that the "done" list. </p>
+By and by, the program got bigger and it is still growing. The "todo" grows faster that the "done" list. <br>
+Have fun using it!</p>
+
+<p>I am new to Cozmo, new to GUI programming and still new to Python. <br>
+So this project is definitely not programmed in the most efficient or most elegant way. </p>
 
 <ul>
 <li><a href = "#What it does">What it does</a></li>
-<li><a href = "#Acknowledgements, license and Liability">Acknowledgements, license and Liability</a></li>
+<li><a href = "#Acknowledgements, License and Liability">Acknowledgements, license and Liability</a></li>
 <li><a href = "#Name">The name "CozmoCommander"</a></li>
 <li><a href = "#Prerequisites">Prerequisites</a></li>
 <li><a href = "#How to start CozmoCommander">How to start CozmoCommander</a></li>
@@ -35,7 +39,7 @@ You can create virtual objects in the 2D map and send Cozmo to a location by dou
 I thank Grinning Hermit for providing the Cozmo Explorer Tool which was a great source of inspiration. <br>
 I thank all who provide great tutorials on Python and TkInter</p>
 
-<p>Special thanks to <a href="https://github.com/LucasWaelti/" target="NewWindow">Lucas Waelti</a> for providing the <a href="https://github.com/LucasWaelti/Cozmo/blob/master/self_docking/self_docking_v2.py" target="NewWindow">self_docking</a> algorithm</p>
+<p>Special thanks to <a href="https://github.com/LucasWaelti/" target="NewWindow">Lucas Waelti</a> for providing the <a href="https://github.com/LucasWaelti/Cozmo/tree/master/self_docking" target="NewWindow">self_docking</a> algorithm</p>
 
 <p>Licensed under the Apache License, Version 2.0 (the "License");<br>
 you may not use this file except in compliance with the License.<br>
@@ -59,8 +63,8 @@ and damages or injuries caused by the robot. </p>
 but this name was already taken. </p>
 
 <p>"Commander" is not so bad as you can give commands to Cozmo. And this name is an hommage at the once famous 
-Norton Commander, long before Windows came up. Norton Commander was ported to Windows by the Swiss man Christian Ghisler. Originally he called it Windows Commander, but for some copyright reasons he changed it to Total Commander. 
-There are several ports to Linux, but Total Commander is still my favorite and, yes, it runs under Wine. 
+Norton Commander, long before Windows came up. It was a "graphical" file manager. Norton Commander was ported to Windows by the Swiss man Christian Ghisler. Originally he called it Windows Commander, but for some copyright reasons he changed it to Total Commander. 
+There are several ports to Linux. When you want that retro feeling, try Midnight Commander. Total Commander is still my favorite and, yes, it runs under Wine. 
 Forget Microsoft's Explorer, forget all other graphical file managers, <a href="https://www.ghisler.com/" target="NewWindow">Total Commander</a> is it. </p>
 
 <p>Now, back to Cozmo and CozmoCommander:</p>
@@ -68,9 +72,9 @@ Forget Microsoft's Explorer, forget all other graphical file managers, <a href="
 <!-- ------------------- -->
 <a name = "Prerequisites"></a><h2>Prerequisites:</h2>
 <ul><li>You need a Cozmo robot,</li> 
-<li>an Android (or IOS?) device connected to the computer via USB.</li>
+<li>an Android or IOS(iPhone, iPad) device connected to the computer via USB.</li>
 <li>the Cozmo App,</li>
-<li>a computer running Linux (Ubuntu) or Windows,</li>
+<li>a Mac or a computer running Linux (Ubuntu) or Windows,</li>
 <li>Python3,</li>
 <li>Cozmo SDK and other Python libraries as requested,   </li>
 <li>Optionally: freeglut to use the 3D viewer.</li></ul>
@@ -81,33 +85,49 @@ Forget Microsoft's Explorer, forget all other graphical file managers, <a href="
 <!-- ------------------- -->
 <a name = "How to start CozmoCommander"></a><h2></a>How to start CozmoCommander:</h2>
 <ul><li>Connect your device to the Cozmo via WiFi and to the computer via USB cable. </li>
-<li>On the device, start the Cozmo App, connect to Cozmo and enter SDK mode. </li>
+<li>On the device, start the Cozmo App, connect to Cozmo and start the SDK mode (under "settings"). </li>
 <li>Place Cozmo on the charger (again). </li></ul>
 
-<p>From the command line (Linux and Windows), enter <br>
-<code>python3 [path to CozmoCommander]CozmoCommander.py [--arguments]</code><br>
-or under Linux <br>
-<code>./CozmoCommander.py [--arguments]</code></p>
+<p>From the command line under Windows, enter <br>
+<code>python [path to CozmoCommander\]CozmoCommander.py [--arguments]</code><br><br>
+Under Linux: <br>
+<code>python3 [path to CozmoCommander/]CozmoCommander.py [--arguments]</code><br>
+or<br>
+<code>&lt;path to CozmoCommander&gt;/CozmoCommander.py [--arguments]</code><br>
+(The path is mandatory. If CozmoCommander is on your present working directory, start it with <code>./CozmoCommander.py</code>)<br><br>
+macOS / OS X .... I don't know. </p>
 
-<p>Arguments: <br>
---help  ... A short description <br>
---viewer=xx ... xx=0 = no viewer (default), 1 = Camera, 2 = 3D, 3 = Camera+3D</p>
+<p>optional arguments:<br>
+  -h, --help       show this help message and exit<br>
+  --viewer VIEWER  0 = no viewer (default), 1 = Camera, 2 = 3D, 4 = 2D map,<br>
+                   combinations are possible like 5=Camera+2Dmap<br>
+  --dfac DFAC      1.. disconnect from all cubes. Save cube batteries.<br>
+  --docc DOCC      1 (default) ...drive off charger contacts, 0 ... stay on charger contacts<br>
+  --tap TAP        1 (default) ...enable tapping cubes, 0 ...disable tapping cubes<br>
+  --debug DEBUG    enable debug messages on console. 0 (default) ... no debug<br>
+                   messages, greater number = more messages<br>
+ </p>
 
-<p>CozmoCommander should start without sending error messages to the console, 
-the GUI should appear 
-and Cozmo should move a few millimeters forward, off the charger contacts. </p>
+<p>CozmoCommander should start without sending error messages to the console, <br>
+the GUI should appear <br>
+and Cozmo should move a few millimeters forward, off the charger contacts (unless you have entered the option --docc=0). </p> 
 
+<!-- ------------------- -->
 <p><a name = "How to use CozmoCommander"></a><h2>How to use CozmoCommander:</h2>
-The GUI is divided into three frames called <a href="#The Motion Frame">"Motion"</a>, <a href="#The Cube Frame">"Cubes"</a> and <a href="#The Faces frame">"Faces"</a>. 
+The GUI is divided into three frames called <a href="#The Motion Frame">"motion"</a>, <a href="#The Cube Frame">"cubes"</a> and <a href="#The Faces frame">"faces"</a>. 
 Below these frames there is the <a href="#The bottom area">bottom section</a> and a status line. </p>
 
-<img src="images\ScreenshotCozmoCommander.jpg">
+<img src="images\ScreenshotCozmoCommander.jpg"><br>
 
 <!-- ------------------- -->
 <a name = "The Motion Frame"></a><h3>The Motion Frame:</h3>
 
 <p>First you will notice four buttons called "Forward", "Backward", "Left" and "Right". <br>
-"Forward" and "Backward" move Cozmo in a (more or less) straight line, "Left" and "Right" make him turn in place. </p>
+"Forward" and "Backward" move Cozmo in a (more or less) straight line, "Left" and "Right" make him turn in place. <br>
+You can also use the cursor keys to move Cozmo. </p>
+
+<p>If you click a button to start another movement while Cozmo is still busy with a movement,an error message will be printed on the terminal window and Cozmo will not start the new movement. 
+Simply try again. </p>
 
 Below these four buttons there is a selection for the method which is used to drive forward or backward. <br>
 <ul>
@@ -155,7 +175,12 @@ Note that the Id's of the cubes are not necessarily consecuteve. <br>
 The buttons turn red or green to indicate whether a cube is visible to the robot. <br>
 Click one of these buttons to select a cube for the following actions. </p>
 
+<p>Cubes can also be selected by pressing the keys F1, F2 and F3 or by tapping the cube. <br>
+Tapping cubes might cause the program to hang, therefore this feature can be disabled with the command line option --tap=0. </p>
+
 <p>You may select a cube which is not visible. In this case, Cozmo will assume that the cube is still in its last known position. </p>
+
+<p>When one of the buttons is labelled "CubeNone", see if it is present and try changing its battery. </p>
 
 <p>Buttons for actions are:
 <ul><li>"Go To" ... Go near the selected cube, the distance can be adjusted with the slider right of the button. </li>
@@ -163,11 +188,19 @@ Click one of these buttons to select a cube for the following actions. </p>
 <li>"Lift"  ... dock and lift up the selected cube.</li>
 <li>"put on top" ... puts a previously lifted cube on top of the selected one. </li>
 <li>"roll" ... roll the selected cube. </li>
-<li>wheelie ... attemp to pop a wheelie (does not work yet)</li>
+<li>wheelie ... attempt to pop a wheelie (does not work yet)</li>
 </ul></p>
 
+<p>The last button is labelled "disconnect from all cubes". Click it to save the cube's batteries. <br>
+After clicking it, its label turnes to "connect to all cubes". <br>
+It will take a few seconds until the cubes are connected again. <br>
+Dicconnected cubes can still be seen by the robot and their coordinates are updated. </p>
+
+<p>The cubes can also be disconnected automatially at startup by giving the command line argument --dfac=1.<br>
+In this case, they cannot be re-connected. </p>
+
 <p>On the bottom of the Cube frame, the coordinates (X,Y,Z in mm and rotation angle in degrees) and the battery status of the selected cube are displayed. <br>
-When the coordinates of a cube are 0,0,0, then the cobe has not yet been seen. <br>
+When the coordinates of a cube are 0,0,0, then the cube has not yet been seen. <br>
 On program start, the battery status is "Unknown" until a valid reading is received. </p>
 
 <!-- ------------------- -->
@@ -182,16 +215,17 @@ The adjacent button "repeat" will play the previously selected animation again. 
 <p>A text element lets you enter a text which Cozmo will say when you click the "say" button. </p>
 
 <p>The status line shows the battery voltage and whether Cozmo is charging. The battery voltage is expressed as absolute voltage and as a percentage. 
-This percentage is still experimental, you might see values exceeding the 0..100% range.</p>
+This percentage is still experimental, you might see values exceeding the 0..100% range. <br>
+It also indicates when Cozmo has detected a cliff or is picked up (which seeem to be redundant but it is still displayed)</p>
 
 <!-- ------------------- -->
 <a name = "The 2D map"></a><h2>The 2D map:</h2>
 
 <img src="images\Screenshot2Dmap.jpg">
 
-<p>When you click the "map" button in the "motion" frame, a separate window is opened. <br>
+<p>When you click the "map" button in the <a href="#The Motion Frame">"motion" frame</a>, a separate window is opened. <br>
 The map shows coordinate axes with ticks every 100 mm. <br>
-Cozmo's location is shown as a black dot. When Cozmo moves, the dot moves and its motion is traced with a line. </p>
+Cozmo's location is shown as an arc (like a pie slice), roughly representing the viewing angle of the camera. When Cozmo moves, the arc moves and its motion is traced with a line. </p>
 
 <p>A double-click on the map sends Cozmo to the spot where you clicked. </p>
 
